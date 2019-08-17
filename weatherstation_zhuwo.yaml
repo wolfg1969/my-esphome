@@ -1,0 +1,6 @@
+substitutions:
+  devicename: weathersation_zhuwo
+  location_name: 主卧
+  domoticz_device_id: "91"
+
+<<: !include weatherstation/bmp280_dht11.yaml

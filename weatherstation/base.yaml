@@ -1,0 +1,24 @@
+esphome:
+  name: $devicename
+  platform: ESP8266
+  board: nodemcuv2
+
+<<: !include ../common/base.yaml
+
+i2c:
+  sda: D1
+  scl: D2
+  scan: False
+  
+interval:
+  - interval: 60s
+    then:
+      - lambda: !lambda |-
+          id(mqtt_client).publish_json("domoticz/in", [=](JsonObject &root) {
+            root["command"] = "udevice";
+            root["idx"] = ${domoticz_device_id};
+            root["nvalue"] = 0;
+            root["svalue"] = String(id(temp).state) + ";" + 
+              String(id(hum).state) + ";0;" + 
+              String(id(bar).state) + ";0";
+          });
