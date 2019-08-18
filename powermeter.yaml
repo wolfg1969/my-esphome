@@ -1,0 +1,47 @@
+substitutions:
+  devicename: powermeter
+  domoticz_device_id: "94"
+
+esphome:
+  name: $devicename
+  platform: ESP8266
+  board: nodemcuv2
+  includes:
+    - LT518_sensor.h
+
+<<: !include common/base.yaml
+
+logger:
+  esp8266_store_log_strings_in_flash: False
+
+uart:
+  id: uart_bus
+  tx_pin: GPIO5  # D1
+  rx_pin: GPIO4  # D2
+  baud_rate: 4800
+
+sensor:
+  - platform: custom
+    lambda: |-
+      auto sensor = new LT518Sensor(id(uart_bus));
+      App.register_component(sensor);
+      return {sensor};
+    sensors:
+      id: lt518
+      name: "用电量"
+      unit_of_measurement: w
+      on_value:
+        then:
+          - lambda: |- 
+              id(mqtt_client).publish_json("domoticz/in", [=](JsonObject &root) {
+                root["command"] = "udevice";
+                root["idx"] = ${domoticz_device_id};
+                root["nvalue"] = 0;
+                root["svalue"] = String(id(lt518).state) + ";0";
+              }); 
+
+# interval:
+#   - interval: 60s
+#     then:
+#       - uart.write: [0x01, 0x4A, 0x53, 0x59, 0x03, 0x85, 0x98]
+#       - logger.log: "Reset command wrote to uart"
