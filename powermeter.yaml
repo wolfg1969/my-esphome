@@ -27,9 +27,12 @@ sensor:
       App.register_component(sensor);
       return {sensor};
     sensors:
-      id: lt518
+      id: power
       name: "用电量"
-      unit_of_measurement: w
+      unit_of_measurement: W
+      accuracy_decimals: 0
+      filters:
+        - multiply: 0.0001
       on_value:
         then:
           - lambda: |- 
@@ -37,7 +40,7 @@ sensor:
                 root["command"] = "udevice";
                 root["idx"] = ${domoticz_device_id};
                 root["nvalue"] = 0;
-                root["svalue"] = String(id(lt518).state) + ";0";
+                root["svalue"] = String(x) + ";0";
               }); 
 
 # interval:
