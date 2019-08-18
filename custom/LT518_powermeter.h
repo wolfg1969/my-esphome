@@ -2,10 +2,10 @@ using namespace esphome::uart;
 
 #include "esphome.h"
 
-class LT518Sensor : public PollingComponent, public UARTDevice, public Sensor
+class LT518PowerMeter : public PollingComponent, public UARTDevice, public Sensor
 {
     public:
-        LT518Sensor(UARTComponent *parent) : PollingComponent(30000), UARTDevice(parent) {}
+        LT518PowerMeter(UARTComponent *parent) : PollingComponent(30000), UARTDevice(parent) {}
 
         float value = 0;
 
