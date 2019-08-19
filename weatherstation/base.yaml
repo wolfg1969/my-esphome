@@ -18,7 +18,8 @@ interval:
             root["command"] = "udevice";
             root["idx"] = ${domoticz_device_id};
             root["nvalue"] = 0;
-            root["svalue"] = String(id(temp).state) + ";" + 
-              String(id(hum).state) + ";0;" + 
-              String(id(bar).state) + ";0";
+            root["svalue"] = String(id(${devicename}_temp).state) + ";" + 
+              String(id(${devicename}_hum).state) + ";" +
+              String(id(${devicename}_hum_stat).state) + ";" + 
+              String(id(${devicename}_bar).state) + ";0";
           });
