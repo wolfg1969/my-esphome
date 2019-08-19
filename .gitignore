@@ -8,5 +8,6 @@
 **/.piolibdeps/
 **/lib/
 **/src/
+*.csv
 **/platformio.ini
 **/secrets.yaml

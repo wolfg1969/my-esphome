@@ -1,0 +1,6 @@
+substitutions:
+  devicename: weathersation_livingroom
+  location_name: 客厅
+  domoticz_device_id: "95"
+
+<<: !include weatherstation/bme280.yaml
