@@ -5,7 +5,7 @@ using namespace esphome::uart;
 class LT518PowerMeter : public PollingComponent, public UARTDevice, public Sensor
 {
     public:
-        LT518PowerMeter(UARTComponent *parent) : PollingComponent(30000), UARTDevice(parent) {}
+        LT518PowerMeter(UARTComponent *parent) : PollingComponent(10000), UARTDevice(parent) {}
 
         float value = 0;
 
@@ -99,20 +99,20 @@ class LT518PowerMeter : public PollingComponent, public UARTDevice, public Senso
             while (available() >= 1)
             {
                 read_byte(this->temp_byte_pointer);
-                //   ESP_LOGD("custom", ">>> %#010x", temp_byte);
+                // ESP_LOGD("custom", ">>> %#010x", temp_byte);
                 this->Rx_Buffer[this->Rx_Counter] = temp_byte;
                 this->Rx_Counter++;
             }
 
             if (this->Rx_Counter >= 37)
             {
-                ESP_LOGD("custom", ">>> RX_Counter: %d", this->Rx_Counter);
+                ESP_LOGD("custom", ">>> %d bytes receieved.", this->Rx_Counter);
 
                 if (this->Rx_Buffer[0] == this->Read_ID) //确认ID正确
                 {
 
                     crcnow.word16 = this->chkcrc(Rx_Buffer, this->Rx_Counter - 2);
-                    ESP_LOGD("custom", ">>> crcnow.word16: %d", crcnow.word16);
+                    // ESP_LOGD("custom", ">>> crcnow.word16: %d", crcnow.word16);
 
                     if (crcnow.byte[0] == this->Rx_Buffer[this->Rx_Counter - 1] &&
                         crcnow.byte[1] == this->Rx_Buffer[this->Rx_Counter - 2])   //确认CRC校验正确
@@ -120,19 +120,19 @@ class LT518PowerMeter : public PollingComponent, public UARTDevice, public Senso
 
                         ESP_LOGD("custom", ">>> crc ok");
 
-                        // unsigned long voltage_data = (((unsigned long)(Rx_Buffer[3])) << 24) |
-                        //                             (((unsigned long)(Rx_Buffer[4])) << 16) |
-                        //                             (((unsigned long)(Rx_Buffer[5])) << 8) |
-                        //                             Rx_Buffer[6];
+                        unsigned long voltage_data = (((unsigned long)(Rx_Buffer[3])) << 24) |
+                                                    (((unsigned long)(Rx_Buffer[4])) << 16) |
+                                                    (((unsigned long)(Rx_Buffer[5])) << 8) |
+                                                    Rx_Buffer[6];
 
-                        // ESP_LOGD("custom", ">>> voltage_data: %lu", voltage_data);
+                        ESP_LOGD("custom", ">>> voltage_data: %lu", voltage_data);
 
-                        // unsigned long current_data = (((unsigned long)(Rx_Buffer[7])) << 24) |
-                        //                             (((unsigned long)(Rx_Buffer[8])) << 16) |
-                        //                             (((unsigned long)(Rx_Buffer[9])) << 8) |
-                        //                             Rx_Buffer[10];
+                        unsigned long current_data = (((unsigned long)(Rx_Buffer[7])) << 24) |
+                                                    (((unsigned long)(Rx_Buffer[8])) << 16) |
+                                                    (((unsigned long)(Rx_Buffer[9])) << 8) |
+                                                    Rx_Buffer[10];
 
-                        // ESP_LOGD("custom", ">>> current_data: %lu", current_data);
+                        ESP_LOGD("custom", ">>> current_data: %lu", current_data);
 
                         unsigned long power_data = (((unsigned long)(this->Rx_Buffer[11])) << 24) |
                                                 (((unsigned long)(this->Rx_Buffer[12])) << 16) |
@@ -141,12 +141,12 @@ class LT518PowerMeter : public PollingComponent, public UARTDevice, public Senso
 
                         ESP_LOGD("custom", ">>> power_data: %lu", power_data);
 
-                        // unsigned long energy_data = (((unsigned long)(this->Rx_Buffer[15])) << 24) |
-                        //                             (((unsigned long)(this->Rx_Buffer[16])) << 16) |
-                        //                             (((unsigned long)(this->Rx_Buffer[17])) << 8) |
-                        //                             this->Rx_Buffer[18];
+                        unsigned long energy_data = (((unsigned long)(this->Rx_Buffer[15])) << 24) |
+                                                    (((unsigned long)(this->Rx_Buffer[16])) << 16) |
+                                                    (((unsigned long)(this->Rx_Buffer[17])) << 8) |
+                                                    this->Rx_Buffer[18];
 
-                        // ESP_LOGD("custom", ">>> energy_data: %lu", energy_data);
+                        ESP_LOGD("custom", ">>> energy_data: %lu", energy_data);
 
                         // unsigned long pf_data = (((unsigned long)(this->Rx_Buffer[19])) << 24) |
                         //                         (((unsigned long)(this->Rx_Buffer[20])) << 16) |
