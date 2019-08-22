@@ -3,4 +3,7 @@ substitutions:
   location_name: 工作间
   domoticz_device_id: "92"
 
-<<: !include weatherstation/bmp280_dht11.yaml
+<<: !include weatherstation/base.yaml
+
+sensor: !include_dir_list weatherstation/work_room/sensors/
+interval: !include_dir_list weatherstation/work_room/automations/

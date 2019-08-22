@@ -1,0 +1,8 @@
+platform: pmsx003
+type: PMSX003
+pm_2_5:
+  name: "${location_name} PM2.5 浓度"
+  id: "${devicename}_pm_2_5"
+pm_10_0:
+  name: "${location_name} PM10 浓度"
+  id: "${devicename}_pm_10_0"

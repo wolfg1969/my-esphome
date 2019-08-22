@@ -1,0 +1,10 @@
+platform: dht
+pin: D3
+model: DHT11
+temperature:
+  name: "${location_name}温度 (DHT)"
+  internal: True
+humidity:
+  name: "${location_name}湿度"
+  id: "${devicename}_hum"
+update_interval: 15s

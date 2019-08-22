@@ -2,5 +2,14 @@ substitutions:
   devicename: weathersation_zhuwo
   location_name: 主卧
   domoticz_device_id: "91"
+  domoticz_device_id_2: "96"
+  domoticz_device_id_3: "97"
 
-<<: !include weatherstation/bmp280_dht11.yaml
+<<: !include weatherstation/base.yaml
+
+uart:
+  rx_pin: D6
+  baud_rate: 9600
+
+sensor: !include_dir_list weatherstation/bed_room/sensors/
+interval: !include_dir_list weatherstation/bed_room/automations/

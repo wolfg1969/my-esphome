@@ -1,0 +1,16 @@
+platform: template
+id: "${devicename}_hum_stat"
+internal: True
+accuracy_decimals: 0
+lambda: |-
+  float hum = id(${devicename}_hum).state;
+  if (hum < 25.0) {
+    return 2;
+  } else if (hum > 60.0) {
+    return 3;
+  } else if (hum >= 25.0 && hum <=60.0) {
+    return 1;
+  } else {
+    return 0;
+  }
+update_interval: 15s

@@ -3,7 +3,10 @@ substitutions:
   location_name: 客厅
   domoticz_device_id: "95"
 
-<<: !include weatherstation/bme280.yaml
+<<: !include weatherstation/base.yaml
+
+sensor: !include_dir_list weatherstation/living_room/sensors/
+interval: !include_dir_list weatherstation/living_room/automations/
 
 time:
   - platform: sntp
