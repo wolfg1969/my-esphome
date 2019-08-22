@@ -7,7 +7,7 @@ esphome:
   platform: ESP8266
   board: nodemcuv2
   includes:
-    - custom/LT518_power_sensor.h
+    - custom/LT518.h
 
 <<: !include common/base.yaml
 
