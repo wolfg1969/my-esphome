@@ -7,7 +7,7 @@ esphome:
   platform: ESP8266
   board: nodemcuv2
   includes:
-    - custom/LT518_powermeter.h
+    - custom/LT518_power_sensor.h
 
 <<: !include common/base.yaml
 
@@ -23,7 +23,7 @@ uart:
 sensor:
   - platform: custom
     lambda: |-
-      auto sensor = new LT518PowerMeter(id(uart_bus));
+      auto sensor = new LT518PowerSensor(id(uart_bus));
       App.register_component(sensor);
       return {sensor};
     sensors:
