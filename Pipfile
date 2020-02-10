@@ -7,10 +7,8 @@ verify_ssl = true
 
 [packages]
 esphome = "*"
-voluptuous = "==0.11.5"
-tornado = "*"
-esptool = "*"
+#voluptuous = "==0.11.5"
+#tornado = "*"
+#esptool = "*"
+#pillow = "*"
 pillow = "*"
-
-[requires]
-python_version = "2.7"
