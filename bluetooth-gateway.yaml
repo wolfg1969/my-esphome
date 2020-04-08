@@ -1,0 +1,30 @@
+esphome:
+  name: bluetooth_gateway
+  platform: ESP32
+  board: lolin32
+
+<<: !include common/base.yaml
+
+esp32_ble_tracker:
+
+sensor:
+  - platform: xiaomi_lywsd02
+    mac_address: 3F:59:C8:73:10:F8
+    temperature:
+      name: "Xiaomi LYWSD02 Temperature"
+      id: "lywsd02_temp"
+    humidity:
+      name: "Xiaomi LYWSD02 Humidity"
+      id: "lywsd02_hum"
+
+interval:
+  - interval: 60s
+    then:
+      - lambda: !lambda |-
+          id(mqtt_client).publish_json("domoticz/in", [=](JsonObject &root) {
+            root["command"] = "udevice";
+            root["idx"] = 90;
+            root["nvalue"] = 0;
+            root["svalue"] = String(id(lywsd02_temp).state) + ";" + 
+              String(id(lywsd02_hum).state) + ";" + "0";
+          });
