@@ -11,5 +11,12 @@ uart:
   rx_pin: D6
   baud_rate: 9600
 
+switch:
+  - platform: gpio
+    pin: 
+      number: D0
+    id: pms_set
+    name: "Start measuring"
+
 sensor: !include_dir_list weatherstation/bed_room/sensors/
 interval: !include_dir_list weatherstation/bed_room/automations/
