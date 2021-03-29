@@ -1,7 +1,7 @@
 interval: 1800s
 then:
   - switch.turn_on: pms_set
-  - delay: 20s
+  - delay: 45s
   - lambda: !lambda |-
       id(mqtt_client).publish_json("domoticz/in", [=](JsonObject &root) {
         root["command"] = "udevice";
