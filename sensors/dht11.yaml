@@ -6,5 +6,5 @@ temperature:
   internal: True
 humidity:
   name: "${location_name}湿度"
-  id: "${devicename}_hum"
+  id: "${devicename}_${location_id}_hum"
 update_interval: 15s

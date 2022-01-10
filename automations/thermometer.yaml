@@ -5,8 +5,8 @@ then:
         root["command"] = "udevice";
         root["idx"] = ${domoticz_device_id};
         root["nvalue"] = 0;
-        root["svalue"] = String(id(${devicename}_temp).state) + ";" + 
-          String(id(${devicename}_hum).state) + ";" +
-          String(id(${devicename}_hum_stat).state) + ";" + 
-          String(id(${devicename}_bar).state) + ";0";
+        root["svalue"] = String(id(${devicename}_${location_id}_temp).state) + ";" + 
+          String(id(${devicename}_${location_id}_hum).state) + ";" +
+          String(id(${devicename}_${location_id}_hum_stat).state) + ";" + 
+          String(id(${devicename}_${location_id}_bar).state) + ";0";
       });

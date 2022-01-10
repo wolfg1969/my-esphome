@@ -11,3 +11,5 @@
 *.csv
 **/platformio.ini
 **/secrets.yaml
+.python-version
+/*demo*

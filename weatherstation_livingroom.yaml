@@ -1,5 +1,6 @@
 substitutions:
-  devicename: weatherstation_livingroom
+  devicename: weatherstation
+  location_id: livingroom
   location_name: 客厅
   domoticz_device_id: "95"
 
@@ -36,11 +37,11 @@ display:
       it.strftime(0, 60, id(font2), TextAlign::BASELINE_LEFT, "%H:%M", id(sntp_time).now());
 
       // Print temperature
-      if (id(${devicename}_temp).has_state()) {
-        it.printf(127, 23, id(font3), TextAlign::TOP_RIGHT , "%.1f°", id(${devicename}_temp).state);
+      if (id(${devicename}_${location_id}_temp).has_state()) {
+        it.printf(127, 23, id(font3), TextAlign::TOP_RIGHT , "%.1f°", id(${devicename}_${location_id}_temp).state);
       }
 
       // Print humidity
-      if (id(${devicename}_hum).has_state()) {
-        it.printf(127, 60, id(font3), TextAlign::BASELINE_RIGHT , "%.1f%%", id(${devicename}_hum).state);
+      if (id(${devicename}_${location_id}_hum).has_state()) {
+        it.printf(127, 60, id(font3), TextAlign::BASELINE_RIGHT , "%.1f%%", id(${devicename}_${location_id}_hum).state);
       }

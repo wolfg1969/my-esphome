@@ -1,9 +1,9 @@
 platform: template
-id: "${devicename}_hum_stat"
+id: "${devicename}_${location_id}_hum_stat"
 internal: True
 accuracy_decimals: 0
 lambda: |-
-  float hum = id(${devicename}_hum).state;
+  float hum = id(${devicename}_${location_id}_hum).state;
   if (hum < 25.0) {
     return 2;
   } else if (hum > 60.0) {

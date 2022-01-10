@@ -7,12 +7,12 @@ then:
         root["command"] = "udevice";
         root["idx"] = ${domoticz_device_id_2};
         root["nvalue"] = 0;
-        root["svalue"] = String(id(${devicename}_pm_2_5).state);
+        root["svalue"] = String(id(${devicename}_${location_id}_pm_2_5).state);
       });
       id(mqtt_client).publish_json("domoticz/in", [=](JsonObject &root) {
         root["command"] = "udevice";
         root["idx"] = ${domoticz_device_id_3};
         root["nvalue"] = 0;
-        root["svalue"] = String(id(${devicename}_pm_10_0).state);
+        root["svalue"] = String(id(${devicename}_${location_id}_pm_10_0).state);
       });
   - switch.turn_off: pms_set

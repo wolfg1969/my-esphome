@@ -2,12 +2,12 @@ sensor:
   - platform: bmp280
     temperature:
       name: "${location_name}温度"
-      id: "${devicename}_temp"
+      id: "${devicename}_${location_id}_temp"
       oversampling: 16x
       accuracy_decimals: 1
     pressure:
       name: "${location_name}气压"
-      id: "${devicename}_bar"
+      id: "${devicename}_${location_id}_bar"
     address: 0x76
     update_interval: 15s
   - platform: dht
@@ -18,14 +18,14 @@ sensor:
       internal: True
     humidity:
       name: "${location_name}湿度"
-      id: "${devicename}_hum"
+      id: "${devicename}_${location_id}_hum"
     update_interval: 15s
   - platform: template
-    id: "${devicename}_hum_stat"
+    id: "${devicename}_${location_id}_hum_stat"
     internal: True
     accuracy_decimals: 0
     lambda: |-
-      float hum = id(${devicename}_hum).state;
+      float hum = id(${devicename}_${location_id}_hum).state;
       if (hum < 25.0) {
         return 2;
       } else if (hum > 60.0) {

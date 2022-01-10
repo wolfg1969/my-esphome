@@ -1,5 +1,6 @@
 substitutions:
-  devicename: weatherstation_zhuwo
+  devicename: weatherstation
+  location_id: zhuwo
   location_name: 主卧
   domoticz_device_id: "91"
   domoticz_device_id_2: "96"

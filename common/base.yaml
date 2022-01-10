@@ -1,6 +1,7 @@
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  use_address: ${devicename}_${location_id}.local
 
 # Enable logging
 logger:
