@@ -1,0 +1,2 @@
+id: mqtt_client
+broker: !secret mqtt_broker

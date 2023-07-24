@@ -1,7 +1,8 @@
 substitutions:
-  devicename: nas-switch
-  location_id: livingroom
-  domoticz_device_id: "100"
+  devicename: powerswitch
+  location_id: nas
+  location_name: NAS机箱
+  domoticz_device_id: "184"
   name: NAS
 
 esphome:
@@ -10,6 +11,30 @@ esphome:
   board: nodemcuv2
   
 <<: !include common/base.yaml
+
+mqtt:
+  <<: !include common/mqtt.yaml
+  on_json_message:
+    topic: domoticz/out
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return x.containsKey("idx") && x["idx"] == 181;
+          then:
+            - switch.turn_on: power
+      - if:
+          condition:
+            lambda: |-
+              return x.containsKey("idx") && x["idx"] == 182;
+          then:
+            - switch.turn_on: force_power
+      - if:
+          condition:
+            lambda: |-
+              return x.containsKey("idx") && x["idx"] == 183;
+          then:
+            - switch.turn_on: reset_switch
 
 logger:
   esp8266_store_log_strings_in_flash: False
@@ -21,8 +46,8 @@ switch:
     name: "Power toogle"
     icon: "mdi:PC"
     on_turn_on:
-    - delay: 300ms
-    - switch.turn_off: power
+      - delay: 100ms
+      - switch.turn_off: power
 
   - platform: gpio
     pin: D6
@@ -30,15 +55,15 @@ switch:
     name: "Force power off"
     icon: "mdi:PC"
     on_turn_on:
-    - delay: 5000ms
-    - switch.turn_off: force_power
+      - delay: 5000ms
+      - switch.turn_off: force_power
 
   - platform: gpio
     pin: D7
     id: reset_switch
     on_turn_on:
-    - delay: 300ms
-    - switch.turn_off: reset_switch
+      - delay: 300ms
+      - switch.turn_off: reset_switch
 
 binary_sensor:
   - platform: gpio
@@ -47,4 +72,38 @@ binary_sensor:
     name: "${name} Power State"
     device_class: power
     icon: "mdi:desktop-classic"
+    
+sensor:
+  platform: dht
+  pin: D3
+  model: DHT11
+  temperature:
+    name: "${location_name}温度 (DHT)"
+    id: "${devicename}_${location_id}_temp"
+  humidity:       
+    name: "${location_name}湿度"
+    id: "${devicename}_${location_id}_hum"
+  update_interval: 60s
 
+interval:
+  interval: 60s
+  then:
+    - mqtt.publish_json:
+        topic: domoticz/in
+        payload: |-
+          root["command"] = "udevice";
+          root["idx"] = ${domoticz_device_id};
+          root["nvalue"] = 0;
+          root["svalue"] = String(id(${devicename}_${location_id}_temp).state) + ";" + 
+            String(id(${devicename}_${location_id}_hum).state) + ";0";
+    - mqtt.publish_json:
+        topic: domoticz/in
+        payload: |-
+          root["command"] = "udevice";
+          root["idx"] = 186;
+          root["nvalue"] = int(id(${name}_power_sensor).state);
+          if (id(${name}_power_sensor).state) {
+            root["svalue"] = "ON";
+          } else {
+            root["svalue"] = "OFF";
+          }
