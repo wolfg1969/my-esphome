@@ -1,7 +1,7 @@
 substitutions:
   devicename: weatherstation
   location_id: gongzuojian
-  location_name: 工作间
+  location_name: Gong Zuo Jian
   domoticz_device_id: "92"
 
 <<: !include weatherstation/base.yaml

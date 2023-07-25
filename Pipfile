@@ -7,8 +7,4 @@ verify_ssl = true
 
 [packages]
 esphome = "*"
-#voluptuous = "==0.11.5"
-#tornado = "*"
-#esptool = "*"
-#pillow = "*"
-#pillow = "*"
+#pillow = "<10.0.0"

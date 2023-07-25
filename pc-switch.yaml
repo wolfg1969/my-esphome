@@ -1,9 +1,7 @@
 substitutions:
   devicename: powerswitch
-  location_id: nas
-  location_name: NAS机箱
+  location_id: nas_case
   domoticz_device_id: "184"
-  name: NAS
 
 esphome:
   name: $devicename
@@ -61,6 +59,7 @@ switch:
   - platform: gpio
     pin: D7
     id: reset_switch
+    name: "Reset"
     on_turn_on:
       - delay: 300ms
       - switch.turn_off: reset_switch
@@ -68,8 +67,8 @@ switch:
 binary_sensor:
   - platform: gpio
     pin: D0
-    id: ${name}_power_sensor
-    name: "${name} Power State"
+    id: nas_power_sensor
+    name: "NAS Power State"
     device_class: power
     icon: "mdi:desktop-classic"
     
@@ -78,10 +77,8 @@ sensor:
   pin: D3
   model: DHT11
   temperature:
-    name: "${location_name}温度 (DHT)"
     id: "${devicename}_${location_id}_temp"
   humidity:       
-    name: "${location_name}湿度"
     id: "${devicename}_${location_id}_hum"
   update_interval: 60s
 
@@ -101,8 +98,8 @@ interval:
         payload: |-
           root["command"] = "udevice";
           root["idx"] = 186;
-          root["nvalue"] = int(id(${name}_power_sensor).state);
-          if (id(${name}_power_sensor).state) {
+          root["nvalue"] = int(id(nas_power_sensor).state);
+          if (id(nas_power_sensor).state) {
             root["svalue"] = "ON";
           } else {
             root["svalue"] = "OFF";

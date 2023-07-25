@@ -1,3 +1,7 @@
+substitutions:
+  devicename: bluetooth_gateway
+  location_id: livingroom
+
 esphome:
   name: bluetooth-gateway
   platform: ESP32

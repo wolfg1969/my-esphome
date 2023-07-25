@@ -1,15 +1,15 @@
 sensor:
   - platform: bme280
     temperature:
-      name: "${location_name}温度"
+      name: "${location_name} Tempearture"
       id: "${devicename}_${location_id}_temp"
       oversampling: 16x
       accuracy_decimals: 1
     pressure:
-      name: "${location_name}气压"
+      name: "${location_name} Pressure"
       id: "${devicename}_${location_id}_bar"
     humidity:
-      name: "${location_name}湿度"
+      name: "${location_name} Humidity"
       id: "${devicename}_${location_id}_hum"
     address: 0x76
     update_interval: 15s
