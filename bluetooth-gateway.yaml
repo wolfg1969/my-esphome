@@ -1,5 +1,5 @@
 substitutions:
-  devicename: bluetooth_gateway
+  devicename: bluetooth-gateway
   location_id: livingroom
 
 esphome:
@@ -15,17 +15,33 @@ sensor:
   - platform: xiaomi_lywsd02
     mac_address: 3F:59:C8:73:10:F8
     temperature:
-      name: "Xiaomi LYWSD02 Temperature"
+      name: "LYWSD02 Temperature"
       id: "lywsd02_temp"
     humidity:
-      name: "Xiaomi LYWSD02 Humidity"
+      name: "LYWSD02 Humidity"
       id: "lywsd02_hum"
+    battery_level:
+      name: "LYWSD02 Battery Level"
+
+# binary_sensor:
+#   - platform: xiaomi_mjyd02yla
+#     name: "MJYD02YL-A Night Light"
+#     mac_address: "50:EC:50:CD:32:02"
+#     bindkey: "48403ebe2d385db8d0c187f81e62cb64"
+#     idle_time:
+#       name: "MJYD02YL-A Idle Time"
+#     light:
+#       name: "MJYD02YL-A Light Status"
+#     battery_level:
+#       name: "MJYD02YL-A Battery Level"
+#     illuminance:
+#       name: "MJYD02YL-A Illuminance"
 
 interval:
   - interval: 60s
     then:
       - lambda: !lambda |-
-          id(mqtt_client).publish_json("domoticz/in", [=](JsonObject &root) {
+          id(mqtt_client).publish_json("domoticz/in", [=](JsonObject root) {
             root["command"] = "udevice";
             root["idx"] = 90;
             root["nvalue"] = 0;

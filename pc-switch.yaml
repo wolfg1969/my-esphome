@@ -1,6 +1,6 @@
 substitutions:
   devicename: powerswitch
-  location_id: nas_case
+  location_id: nascase
   domoticz_device_id: "184"
 
 esphome:
