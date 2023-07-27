@@ -7,8 +7,6 @@ esphome:
   name: $devicename
   platform: ESP8266
   board: nodemcuv2
-  # includes:
-  #   - custom/LT518.h
 
 <<: !include common/base.yaml
 
@@ -55,9 +53,12 @@ sensor:
     id: powermeter_voltage
     register_type: holding
     address: 0x0048
-    # custom_command: [ 0x01, 0x03, 0x00, 0x48, 0x00, 0x08, 0xc4, 0x1a]
-    unit_of_measurement: "V"
     value_type: U_DWORD
+    # custom_command: [ 0x01, 0x03, 0x00, 0x48, 0x00, 0x08, 0xc4, 0x1a]
+    device_class: "voltage"
+    state_class: "measurement"
+    accuracy_decimals: 1
+    unit_of_measurement: "V"
     filters:
       - multiply: 0.0001
   - platform: modbus_controller
@@ -66,8 +67,11 @@ sensor:
     id: powermeter_current
     register_type: holding
     address: 0x0049
-    unit_of_measurement: "A"
     value_type: U_DWORD
+    device_class: "current"
+    state_class: "measurement"
+    accuracy_decimals: 2
+    unit_of_measurement: "A"
     filters:
       - multiply: 0.0001
   - platform: modbus_controller
@@ -76,8 +80,11 @@ sensor:
     id: powermeter_power
     register_type: holding
     address: 0x004a
-    unit_of_measurement: "W"
     value_type: U_DWORD
+    device_class: "power"
+    state_class: "measurement"
+    accuracy_decimals: 0
+    unit_of_measurement: "W"
     filters:
       - multiply: 0.0001
   - platform: modbus_controller
@@ -86,8 +93,11 @@ sensor:
     id: powermeter_energy
     register_type: holding
     address: 0x004b
-    unit_of_measurement: "kWh"
     value_type: U_DWORD
+    device_class: "energy"
+    state_class: "total_increasing"
+    accuracy_decimals: 0
+    unit_of_measurement: "kWh"
     filters:
       - multiply: 0.0001
     on_value:
@@ -97,7 +107,7 @@ sensor:
               root["command"] = "udevice";
               root["idx"] = ${domoticz_device_id};
               root["nvalue"] = 0;
-              root["svalue"] = String(x) + ";0";
+              root["svalue"] = String(id(powermeter_power).state) + ";" + String(1000 * x);
             });
   - platform: modbus_controller
     modbus_controller_id: lt518
@@ -105,8 +115,9 @@ sensor:
     id: powermeter_power_factor
     register_type: holding
     address: 0x004c
-    unit_of_measurement: ""
     value_type: U_DWORD
+    device_class: "power_factor"
+    unit_of_measurement: ""
     filters:
       - multiply: 0.001
   - platform: modbus_controller
@@ -115,33 +126,11 @@ sensor:
     id: powermeter_co2
     register_type: holding
     address: 0x004d
-    unit_of_measurement: "Kg"
     value_type: U_DWORD
+    # register_count: 4  # skip next register (32bit): 0x4e
+    device_class: "carbon_dioxide"
+    state_class: "total_increasing"
+    accuracy_decimals: 0
+    unit_of_measurement: "kg"
     filters:
-      - multiply: 0.001
-#   - platform: custom
-#     lambda: |-
-#       auto sensor = new LT518PowerSensor(id(uart_bus));
-#       App.register_component(sensor);
-#       return {sensor};
-#     sensors:
-#       id: power
-#       name: "Power Usage"
-#       unit_of_measurement: W
-#       accuracy_decimals: 0
-#       filters:
-#         - multiply: 0.0001
-#       on_value:
-#         then:
-#           - lambda: |-
-#               id(mqtt_client).publish_json("domoticz/in", [=](JsonObject root) {
-#                 root["command"] = "udevice";
-#                 root["idx"] = ${domoticz_device_id};
-#                 root["nvalue"] = 0;
-#                 root["svalue"] = String(x) + ";0";
-#               });
-# interval:
-#   - interval: 60s
-#     then:
-#       - uart.write: [0x01, 0x4A, 0x53, 0x59, 0x03, 0x85, 0x98]
-#       - logger.log: "Reset command wrote to uart"
+      - multiply: 0.0001
