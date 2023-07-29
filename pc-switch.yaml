@@ -42,7 +42,6 @@ switch:
     pin: D6
     id: power
     name: "Power toogle"
-    icon: "mdi:PC"
     on_turn_on:
       - delay: 100ms
       - switch.turn_off: power
@@ -51,7 +50,6 @@ switch:
     pin: D6
     id: force_power
     name: "Force power off"
-    icon: "mdi:PC"
     on_turn_on:
       - delay: 5000ms
       - switch.turn_off: force_power
@@ -77,8 +75,10 @@ sensor:
   pin: D3
   model: DHT11
   temperature:
+    name: "NAS Inside Temperature"
     id: "${devicename}_${location_id}_temp"
-  humidity:       
+  humidity:
+    name: "NAS Inside Humidity"
     id: "${devicename}_${location_id}_hum"
   update_interval: 60s
 

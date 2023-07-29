@@ -5,6 +5,9 @@ esphome:
 
 <<: !include ../common/base.yaml
 
+mqtt:
+  <<: !include ../common/mqtt.yaml
+
 i2c:
   sda: D1
   scl: D2

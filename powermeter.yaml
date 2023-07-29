@@ -10,13 +10,17 @@ esphome:
 
 <<: !include common/base.yaml
 
+mqtt:
+  <<: !include common/mqtt.yaml
+
 logger:
   esp8266_store_log_strings_in_flash: false
+  baud_rate: 0
 
 uart:
   id: uart_bus
-  tx_pin: GPIO5  # D1
-  rx_pin: GPIO4  # D2
+  tx_pin: GPIO15  # D8
+  rx_pin: GPIO13  # D7
   baud_rate: 4800
   
 modbus:
@@ -28,6 +32,7 @@ modbus_controller:
     address: 0x1
     modbus_id: mod_bus
     setup_priority: -10
+    update_interval: 30s
 
 switch:
   - platform: modbus_controller
@@ -37,6 +42,7 @@ switch:
     address: 0x1
     name: "Reset Energy Reading"
     write_lambda: |-
+      // reset energy reading：01 4A 53 59 03 85 98
       payload.push_back(0x01);  // device address
       payload.push_back(0x4a);
       payload.push_back(0x53);
@@ -117,6 +123,8 @@ sensor:
     address: 0x004c
     value_type: U_DWORD
     device_class: "power_factor"
+    state_class: "measurement"
+    accuracy_decimals: 2
     unit_of_measurement: ""
     filters:
       - multiply: 0.001
@@ -128,7 +136,6 @@ sensor:
     address: 0x004d
     value_type: U_DWORD
     # register_count: 4  # skip next register (32bit): 0x4e
-    device_class: "carbon_dioxide"
     state_class: "total_increasing"
     accuracy_decimals: 0
     unit_of_measurement: "kg"
