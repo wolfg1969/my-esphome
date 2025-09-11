@@ -5,7 +5,8 @@ substitutions:
 
 esphome:
   name: $devicename
-  platform: ESP8266
+
+esp8266:
   board: nodemcuv2
   
 <<: !include common/base.yaml
@@ -39,7 +40,9 @@ logger:
   
 switch:
   - platform: gpio
-    pin: D6
+    pin:
+      number: D6
+      allow_other_uses: true
     id: power
     name: "Power toogle"
     on_turn_on:
@@ -47,7 +50,9 @@ switch:
       - switch.turn_off: power
 
   - platform: gpio
-    pin: D6
+    pin:
+      number: D6
+      allow_other_uses: true
     id: force_power
     name: "Force power off"
     on_turn_on:

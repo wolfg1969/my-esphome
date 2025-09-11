@@ -4,8 +4,11 @@ substitutions:
 
 esphome:
   name: bluetooth-gateway
-  platform: ESP32
+
+esp32:
   board: lolin32
+  framework:
+    type: esp-idf
 
 <<: !include common/base.yaml
 

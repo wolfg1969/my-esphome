@@ -1,5 +1,5 @@
 sensor:
-  - platform: bme280
+  - platform: bme280_i2c
     temperature:
       name: "${location_name} Tempearture"
       id: "${devicename}_${location_id}_temp"
