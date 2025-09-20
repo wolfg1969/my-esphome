@@ -1,0 +1,23 @@
+platform: xiaomi_lywsd02
+mac_address: !secret lywsd02_bt_mac
+temperature:
+  name: "LYWSD02 Temperature"
+  id: "lywsd02_temp"
+  filters:
+  - lambda: |-
+      if (isnan(x)) return {};
+      return x; 
+humidity:
+  name: "LYWSD02 Humidity"
+  id: "lywsd02_hum"
+  filters:
+  - lambda: |-
+      if (isnan(x)) return {};
+      return x; 
+battery_level:
+  name: "LYWSD02 Battery Level"
+  id: "lywsd02_battery_level"
+  filters:
+  - lambda: |-
+      if (isnan(x)) return {};
+      return x; 

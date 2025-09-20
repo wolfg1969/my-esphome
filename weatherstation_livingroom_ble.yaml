@@ -1,0 +1,42 @@
+substitutions:
+  devicename: weatherstation-ble
+  location_id: livingroom
+  location_name: Living Room
+  domoticz_device_id: "90"  # temp and hum
+  domoticz_device_id_2: "193"  # pm2.5
+
+esphome:
+  name: ${devicename}-${location_id}
+
+esp32:
+  board: lolin32_lite
+  framework:
+    type: esp-idf
+
+<<: !include common/base.yaml
+
+mqtt:
+  <<: !include common/mqtt.yaml
+
+esp32_ble:
+  io_capability: keyboard_display
+
+esp32_ble_tracker:
+
+ble_client:
+  - id: airburg_emo_plus
+    mac_address: !secret airburg_emo_plus_bt_mac
+    auto_connect: false
+    on_connect:
+      then:
+        - lambda: |-
+            ESP_LOGD("ble_client_lambda", "Connected to Airburg Emo Plus");
+        # - component.update: airburg_emo_plus_battery_level
+        - component.update: airburg_emo_plus_pm25_density
+    on_disconnect:
+      then:
+        - lambda: |-
+            ESP_LOGD("ble_client_lambda", "Disconnected from  Airburg Emo Plus");
+
+sensor: !include_dir_list weatherstation/living_room_ble/sensors/
+interval: !include_dir_list weatherstation/living_room_ble/automations/

@@ -1,0 +1,11 @@
+interval: 60s
+then:
+  - lambda: !lambda |-
+      char buf[32];
+      sprintf(buf, "%f;%f;0", id(lywsd02_temp).state, id(lywsd02_hum).state);
+      id(mqtt_client).publish_json("domoticz/in", [=](JsonObject root) {
+        root["command"] = "udevice";
+        root["idx"] = ${domoticz_device_id};
+        root["nvalue"] = 0;
+        root["svalue"] = ((std::string) buf).c_str();
+      });

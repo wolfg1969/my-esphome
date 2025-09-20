@@ -3,6 +3,8 @@ wifi:
   password: !secret wifi_password
   use_address: ${devicename}-${location_id}.local
 
+captive_portal:
+
 # Enable logging
 logger:
 

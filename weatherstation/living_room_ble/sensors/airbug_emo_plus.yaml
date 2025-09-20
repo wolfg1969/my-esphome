@@ -1,0 +1,60 @@
+platform: ble_client
+type: characteristic
+ble_client_id: airburg_emo_plus
+id: airburg_emo_plus_pm25_density
+name: "Airbug Emo Plus PM2.5"
+service_uuid: '0000FFF0-0000-1000-8000-00805F9B34FB'
+characteristic_uuid: '0000FFF2-0000-1000-8000-00805F9B34FB'
+icon: 'mdi:molecule'
+device_class: pm25
+state_class: measurement
+unit_of_measurement: 'ug/m3'
+accuracy_decimals: 0
+update_interval: never
+lambda: |-
+  // ESP_LOGD("airburg_emo_plus_data_size: ", "%d", x.size());
+  return (float)((x[10] << 8) | (x[11] & 0xff)) * 1.265;
+on_value:
+  then:
+    - lambda: |-
+        ESP_LOGD("airburg_emo_plus_pm25_density: ", "%f", x);
+        char buf[16];
+        sprintf(buf, "%.0f", x);
+        id(mqtt_client).publish_json("domoticz/in", [=](JsonObject root) {
+          root["command"] = "udevice";
+          root["idx"] = ${domoticz_device_id_2};
+          root["nvalue"] = 0;
+          root["svalue"] = ((std::string) buf).c_str();
+        });
+filters:
+  - lambda: |-
+      if (isnan(x)) return {};
+      return x; 
+
+# platform: ble_client
+# type: characteristic
+# ble_client_id: airburg_emo_plus
+# id: airburg_emo_plus_battery_level
+# name: "Battery Level"
+# service_uuid: '180F'
+# characteristic_uuid: '2A19'
+# icon: 'mdi:battery'
+# unit_of_measurement: '%'
+# accuracy_decimals: 0
+# device_class: battery
+# state_class: measurement
+# entity_category: diagnostic
+# update_interval: never
+# filters:
+#   - lambda: |-
+#       if (isnan(x)) return {};
+#       return x; 
+
+# platform: ble_client
+# type: characteristic
+# ble_client_id: airburg_emo_plus
+# id: airburg_emo_plus_warm_up
+# name: "Warm Up"
+# service_uuid: '0000FFF0-0000-1000-8000-00805F9B34FB'
+# characteristic_uuid: '0000FFF3-0000-1000-8000-00805F9B34FB'
+# update_interval: never
