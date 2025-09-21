@@ -1,0 +1,40 @@
+substitutions:
+  devicename: airburg-emo-plus
+  location_id: livingroom
+  domoticz_device_id: "193"  # pm2.5
+
+esphome:
+  name: ${devicename}-${location_id}
+
+esp32:
+  board: denky32
+  framework:
+    type: esp-idf
+
+<<: !include common/base.yaml
+
+mqtt:
+  <<: !include common/mqtt.yaml
+
+esp32_ble:
+  io_capability: keyboard_display
+
+# esp32_ble_tracker:
+
+ble_client:
+  - id: airburg_emo_plus
+    mac_address: !secret airburg_emo_plus_bt_mac
+    auto_connect: false
+    on_connect:
+      then:
+        - lambda: |-
+            ESP_LOGD("ble_client_lambda", "Connected to BLE device");
+        - component.update: airburg_emo_plus_battery_level
+        - component.update: airburg_emo_plus_pm25_density
+    on_disconnect:
+      then:
+        - lambda: |-
+            ESP_LOGD("ble_client_lambda", "Disconnected from BLE device");
+
+<<: !include sensors/airburg_emo_plus.yaml
+<<: !include automations/airbug_emo_plus.yaml

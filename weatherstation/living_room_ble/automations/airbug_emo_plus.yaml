@@ -1,7 +1,0 @@
-interval: 1800s
-then:
-  - esp32_ble_tracker.stop_scan:
-  - ble_client.connect: airburg_emo_plus
-  - delay: 20s
-  - ble_client.disconnect: airburg_emo_plus
-  - esp32_ble_tracker.start_scan:
