@@ -1,8 +1,18 @@
 platform: pmsx003
 type: PMSX003
 pm_2_5:
-  name: "${location_name} PM2.5"
+  name: "PM2.5"
   id: "${devicename}_${location_id}_pm_2_5"
+  unit_of_measurement: µg/m³
+  accuracy_decimals: 0
+  device_class: pm25
+  state_class: measurement
+  icon: 'mdi:molecule'
 pm_10_0:
-  name: "${location_name} PM10"
+  name: "PM10"
   id: "${devicename}_${location_id}_pm_10_0"
+  unit_of_measurement: µg/m³
+  accuracy_decimals: 0
+  device_class: pm10
+  state_class: measurement
+  icon: 'mdi:molecule'

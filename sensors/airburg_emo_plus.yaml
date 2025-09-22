@@ -9,7 +9,7 @@ sensor:
     icon: 'mdi:molecule'
     device_class: pm25
     state_class: measurement
-    unit_of_measurement: 'ug/m3'
+    unit_of_measurement: 'μg/m³'
     accuracy_decimals: 0
     update_interval: never
     lambda: |-
