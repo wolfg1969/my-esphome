@@ -3,7 +3,7 @@ sensor:
     type: characteristic
     ble_client_id: airburg_emo_plus
     id: airburg_emo_plus_pm25_density
-    name: "Airbug Emo Plus PM2.5"
+    name: "PM2.5"
     service_uuid: '0000FFF0-0000-1000-8000-00805F9B34FB'
     characteristic_uuid: '0000FFF2-0000-1000-8000-00805F9B34FB'
     icon: 'mdi:molecule'
