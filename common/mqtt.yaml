@@ -1,3 +1,5 @@
 id: mqtt_client
 broker: !secret mqtt_broker
+discovery: False
+discover_ip: True
 discovery_object_id_generator: "device_name"
