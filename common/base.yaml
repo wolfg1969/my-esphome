@@ -13,3 +13,16 @@ api:
 
 ota:
   platform: esphome
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    ssid:
+      name: "Connected SSID"
+    mac_address:
+      name: "MAC Address"
+
+button:
+  - platform: restart
+    name: "Restart"

@@ -62,8 +62,8 @@ number:
     name: "Correction"
     id: gas_usage_correction
     min_value: 0
-    max_value: 99999
-    step: 0.01
+    max_value: 9999999
+    step: 1
     optimistic: true
     restore_value: true
     initial_value: 0
@@ -71,16 +71,3 @@ number:
       then:
         - lambda: |-
             id(total_pulses) = x;
-
-button:
-  - platform: restart
-    name: "Restart"
-
-text_sensor:
-  - platform: wifi_info
-    ip_address:
-      name: "IP Address"
-    ssid:
-      name: "Connected SSID"
-    mac_address:
-      name: "MAC Address"
