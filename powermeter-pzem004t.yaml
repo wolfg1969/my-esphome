@@ -1,0 +1,133 @@
+# not used
+substitutions:
+  devicename: powermeter-pzem004t
+  location_id: livingroom
+
+esphome:
+  name: $devicename
+
+esp8266:
+  board: nodemcuv2
+  framework:
+    version: recommended
+
+<<: !include common/base.yaml
+
+logger:
+  esp8266_store_log_strings_in_flash: false
+  level: DEBUG
+  baud_rate: 0  # disable serial logging
+
+uart:
+  id: uart_bus
+  tx_pin: GPIO01
+  rx_pin: GPIO03
+  baud_rate: 9600
+  
+modbus:
+  # flow_control_pin: 5
+  id: mod_bus
+
+modbus_controller:
+  - id: pzem004t
+    address: 0x01
+    modbus_id: mod_bus
+    update_interval: 30s
+
+switch:
+  - platform: modbus_controller
+    modbus_controller_id: pzem004t
+    id: reset_energy_reading
+    name: "Reset Energy Reading"
+    entity_category: config
+    icon: "mdi:toggle-switch"
+    # custom_command: [ 0x01, 0x42 ]
+    address: 0x0005
+    register_type: holding
+    write_lambda: |-
+      // reset energy reading：01 42 a8 00
+      payload.push_back(0x01);  // device address
+      payload.push_back(0x42);  // function code
+      payload.push_back(0xa8);  // CRC High
+      payload.push_back(0x00);  // CRC Low
+      return true;
+
+sensor:
+  - platform: modbus_controller
+    modbus_controller_id: pzem004t
+    name: "Voltage"
+    register_type: read # function code 0x04
+    address: 0x0000
+    value_type: U_WORD
+    # custom_command: [ 0x01, 0x04, 0x00, 0x00, 0x00, 0x01]
+    device_class: "voltage"
+    state_class: "measurement"
+    accuracy_decimals: 1
+    unit_of_measurement: "V"
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: pzem004t
+    name: "Current"
+    register_type: read
+    address: 0x0001
+    register_count: 2
+    value_type: U_DWORD_R
+    # custom_command: [ 0x01, 0x04, 0x00, 0x01, 0x00, 0x02]
+    device_class: "current"
+    state_class: "measurement"
+    accuracy_decimals: 2
+    unit_of_measurement: "A"
+    filters:
+      - multiply: 0.001
+  - platform: modbus_controller
+    modbus_controller_id: pzem004t
+    name: "Power"
+    register_type: read
+    address: 0x0003
+    register_count: 2
+    value_type: U_DWORD_R
+    device_class: "power"
+    state_class: "measurement"
+    accuracy_decimals: 0
+    unit_of_measurement: "W"
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: pzem004t
+    name: "Energy"
+    register_type: read
+    address: 0x0005
+    register_count: 2
+    value_type: U_DWORD_R
+    device_class: "energy"
+    state_class: "total_increasing"
+    accuracy_decimals: 0
+    unit_of_measurement: "Wh"
+    filters:
+      - multiply: 1.0
+  - platform: modbus_controller
+    modbus_controller_id: pzem004t
+    name: "Frequency"
+    id: powermeter_frequency
+    register_type: read
+    address: 0x0007
+    value_type: U_WORD
+    device_class: "frequency"
+    state_class: "measurement"
+    accuracy_decimals: 0
+    unit_of_measurement: "Hz"
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: pzem004t
+    name: "Power Factor"
+    register_type: read
+    address: 0x0008
+    value_type: U_WORD
+    device_class: "power_factor"
+    state_class: "measurement"
+    accuracy_decimals: 2
+    unit_of_measurement: ""
+    filters:
+      - multiply: 0.01

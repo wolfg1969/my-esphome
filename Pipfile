@@ -7,4 +7,4 @@ verify_ssl = true
 
 [packages]
 esphome = "*"
-#pillow = "<10.0.0"
+crcmod = "*"
