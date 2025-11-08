@@ -40,7 +40,7 @@ switch:
     id: reset_energy_reading
     name: "Reset Energy Reading"
     entity_category: config
-    icon: "mdi:toggle-switch"
+    icon: "mdi:restart"
     # custom_command: [ 0x01, 0x42 ]
     address: 0x0005
     register_type: holding
@@ -50,7 +50,7 @@ switch:
       payload.push_back(0x42);  // function code
       payload.push_back(0xa8);  // CRC High
       payload.push_back(0x00);  // CRC Low
-      return true;
+      return false;
 
 sensor:
   - platform: modbus_controller
