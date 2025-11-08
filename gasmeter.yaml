@@ -1,0 +1,86 @@
+substitutions:
+  devicename: "gas-meter"
+  friendly_name: "Gas meter"
+  location_id: kitchen
+
+esphome:
+  name: ${devicename}
+  comment: $friendly_name
+
+esp32:
+  variant: esp32
+  board: denky32
+  framework:
+    type: esp-idf
+
+<<: !include common/base.yaml
+
+mqtt:
+  <<: !include common/mqtt.yaml
+
+# https://simplyexplained.com/blog/tracking-gas-usage-with-esphome-home-assistant-and-tcrt5000/
+# https://bbs.hassbian.com/thread-29556-1-1.html
+
+globals:
+  - id: total_pulses
+    type: int
+    restore_value: false
+    initial_value: '0'
+
+# This is mainly here because the internal_filter of the pulse_counter on ESP32
+# can only be set to a maximum of 13us, which is way too low. The TCRT5000
+# 最多只能设置为 13us，这太低了。The TCRT5000
+
+# sometimes rapidly switches from ON to OFF, causing a lot of "ghost" pulses.
+# The delayed_on filter will make sure that the sensor stayed ON for at least
+# 100ms before increasing the counter.
+binary_sensor:
+  - platform: gpio
+    id: internal_pulse_counter
+    pin: GPIO32
+    internal: true
+    filters:
+      - delayed_on: 300ms
+      - delayed_off: 300ms
+    on_press:
+      then:
+        - lambda: id(total_pulses) += 1;
+
+sensor:
+  - platform: template
+    name: "Gas used"
+    device_class: gas
+    unit_of_measurement: "m³"
+    state_class: "total_increasing"
+    icon: "mdi:fire"
+    accuracy_decimals: 2
+    lambda: |-
+        return id(total_pulses) * 0.01;
+
+number:
+  - platform: template
+    name: "Correction"
+    id: gas_usage_correction
+    min_value: 0
+    max_value: 99999
+    step: 0.01
+    optimistic: true
+    restore_value: true
+    initial_value: 0
+    set_action:
+      then:
+        - lambda: |-
+            id(total_pulses) = x;
+
+button:
+  - platform: restart
+    name: "Restart"
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    ssid:
+      name: "Connected SSID"
+    mac_address:
+      name: "MAC Address"
