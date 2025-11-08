@@ -24,7 +24,7 @@ mqtt:
 globals:
   - id: total_pulses
     type: int
-    restore_value: false
+    restore_value: yes
     initial_value: '0'
 
 # This is mainly here because the internal_filter of the pulse_counter on ESP32
@@ -44,18 +44,21 @@ binary_sensor:
       - delayed_off: 300ms
     on_press:
       then:
-        - lambda: id(total_pulses) += 1;
+        - lambda: |-
+            id(total_pulses) += 1;
+            id(gas_meter).publish_state(id(total_pulses));
 
 sensor:
   - platform: template
     name: "Gas used"
+    id: gas_meter
     device_class: gas
     unit_of_measurement: "m³"
     state_class: "total_increasing"
     icon: "mdi:fire"
     accuracy_decimals: 2
-    lambda: |-
-        return id(total_pulses) * 0.01;
+    filters:
+      - lambda: return x * 0.01;
 
 number:
   - platform: template
@@ -71,3 +74,5 @@ number:
       then:
         - lambda: |-
             id(total_pulses) = x;
+            id(gas_meter).publish_state(id(total_pulses));
+            id(gas_usage_correction).publish_state(0);
