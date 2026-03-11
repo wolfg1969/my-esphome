@@ -1,0 +1,194 @@
+substitutions:
+  devicename: scale-ble
+  location_id: livingroom
+  location_name: Living Room
+  mac_address: !secret scale_bt_mac
+  user1_name: "Yong"
+  user1_weight_min: "60"
+  user1_weight_max: "80"
+  user2_name: "Yan"
+  user2_weight_min: "40"
+  user2_weight_max: "60"
+
+esphome:
+  name: ${devicename}-${location_id}
+
+esp32:
+  board: denky32
+  framework:
+    type: esp-idf
+
+<<: !include common/base.yaml
+
+esp32_ble_tracker:
+
+time:
+  - platform: homeassistant
+    id: esp_time
+
+number:
+  # User 1
+  - platform: template
+    name: "Weight Number ${user1_name}"
+    id: weight_num_user1
+    restore_value: true
+    optimistic: true
+    min_value: 0
+    max_value: 200
+    step: 0.1
+    unit_of_measurement: "kg"
+    internal: true
+  - platform: template
+    name: "Impedance Number ${user1_name}"
+    id: impedance_num_user1
+    restore_value: true
+    optimistic: true
+    min_value: 0
+    max_value: 1000
+    step: 0.1
+    unit_of_measurement: "ohm"
+    internal: true
+  - platform: template
+    name: "Last Measurement Time Number ${user1_name}"
+    id: last_measurement_time_num_user1
+    restore_value: true
+    optimistic: true
+    min_value: 0
+    max_value: 4294967295
+    step: 0.1
+    unit_of_measurement: "%"
+    internal: true
+  # User 2
+  - platform: template
+    name: "Weight Number ${user2_name}"
+    id: weight_num_user2
+    restore_value: true
+    optimistic: true
+    min_value: 0
+    max_value: 200
+    step: 0.1
+    unit_of_measurement: "kg"
+    internal: true
+  - platform: template
+    name: "Impedance Number ${user2_name}"
+    id: impedance_num_user2
+    restore_value: true
+    optimistic: true
+    min_value: 0
+    max_value: 1000
+    step: 0.1
+    unit_of_measurement: "ohm"
+    internal: true
+  - platform: template
+    name: "Last Measurement Time Number ${user2_name}"
+    id: last_measurement_time_num_user2
+    restore_value: true
+    optimistic: true
+    min_value: 0
+    max_value: 4294967295
+    step: 0.1
+    unit_of_measurement: "%"
+    internal: true
+
+sensor:
+  # Weight sensor for User 1
+  - platform: template
+    name: "Weight ${user1_name}"
+    id: weight_user1
+    unit_of_measurement: "kg"
+    icon: "mdi:weight-kilogram"
+    accuracy_decimals: 2
+    state_class: measurement
+    lambda: "return id(weight_num_user1).state;"
+
+  # Impedance sensor for User 1
+  - platform: template
+    name: "Impedance ${user1_name}"
+    id: impedance_user1
+    unit_of_measurement: "ohm"
+    icon: "mdi:omega"
+    accuracy_decimals: 0
+    state_class: measurement
+    lambda: "return id(impedance_num_user1).state;"
+
+  # Last measurement time sensor for User 1
+  - platform: template
+    name: "Last Measurement Time ${user1_name}"
+    id: last_measurement_time_user1
+    lambda: "return id(last_measurement_time_num_user1).state;"
+    device_class: timestamp
+
+  # Weight sensor for User 2
+  - platform: template
+    name: "Weight ${user2_name}"
+    id: weight_user2
+    unit_of_measurement: "kg"
+    icon: "mdi:weight-kilogram"
+    accuracy_decimals: 2
+    state_class: measurement
+    lambda: "return id(weight_num_user2).state;"
+
+  # Impedance sensor for User 2
+  - platform: template
+    name: "Impedance ${user2_name}"
+    id: impedance_user2
+    unit_of_measurement: "ohm"
+    icon: "mdi:omega"
+    accuracy_decimals: 0
+    state_class: measurement
+    lambda: "return id(impedance_num_user2).state;"
+
+  # Last measurement time sensor for User 2
+  - platform: template
+    name: "Last Measurement Time ${user2_name}"
+    id: last_measurement_time_user2
+    lambda: "return id(last_measurement_time_num_user2).state;"
+    device_class: timestamp
+  
+  # Weight sensor Xiaomi Mi Scale V2
+  - platform: xiaomi_miscale
+    mac_address: ${mac_address}
+    weight:
+      name: "Xiaomi Mi Scale Weight"
+      id: xiaomi_mi_scale_weight
+      on_value:
+        then:
+          - if:
+              condition:
+                lambda: 'return (id(xiaomi_mi_scale_weight).state >= atof("${user1_weight_min}")) && (id(xiaomi_mi_scale_weight).state <= atof("${user1_weight_max}"));'
+              then:
+                - number.set:
+                    id: weight_num_user1
+                    value: !lambda "return id(xiaomi_mi_scale_weight).state;"
+                - number.set:
+                    id: last_measurement_time_num_user1
+                    value: !lambda "return id(esp_time).now().timestamp;"
+          - if:
+              condition:
+                lambda: 'return (id(xiaomi_mi_scale_weight).state >= atof("${user2_weight_min}")) && (id(xiaomi_mi_scale_weight).state <= atof("${user2_weight_max}"));'
+              then:
+                - number.set:
+                    id: weight_num_user2
+                    value: !lambda "return id(xiaomi_mi_scale_weight).state;"
+                - number.set:
+                    id: last_measurement_time_num_user2
+                    value: !lambda "return id(esp_time).now().timestamp;"
+    impedance:
+      name: "Xiaomi Mi Scale Impedance"
+      id: xiaomi_mi_scale_impedance
+      on_value:
+        then:
+          - if:
+              condition:
+                lambda: 'return (id(xiaomi_mi_scale_weight).state >= atof("${user1_weight_min}")) && (id(xiaomi_mi_scale_weight).state <= atof("${user1_weight_max}"));'
+              then:
+                - number.set:
+                    id: impedance_num_user1
+                    value: !lambda "return id(xiaomi_mi_scale_impedance).state;"
+          - if:
+              condition:
+                lambda: 'return (id(xiaomi_mi_scale_weight).state >= atof("${user2_weight_min}")) && (id(xiaomi_mi_scale_weight).state <= atof("${user2_weight_max}"));'
+              then:
+                - number.set:
+                    id: impedance_num_user2
+                    value: !lambda "return id(xiaomi_mi_scale_impedance).state;"
