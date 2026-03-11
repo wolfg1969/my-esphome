@@ -1,0 +1,49 @@
+substitutions:
+  devicename: "gesture-switch"
+  friendly_name: "Gesture Switch"
+  location_id: Bathroom
+
+esphome:
+  name: ${devicename}
+  comment: $friendly_name
+
+esp32:
+  variant: esp32
+  board: denky32
+  framework:
+    type: esp-idf
+
+<<: !include common/base.yaml
+
+mqtt:
+  <<: !include common/mqtt.yaml
+
+i2c:
+  - id: bus_a
+    sda: GPIO21
+    scl: GPIO22
+    scan: true
+
+apds9960:
+  address: 0x39
+  update_interval: 60s
+  i2c_id: bus_a
+
+sensor:
+  - platform: apds9960
+    type: CLEAR
+    name: "APDS9960 Clear Channel"
+
+binary_sensor:
+  - platform: apds9960
+    direction: UP
+    name: "APDS960 Up Movement"
+  - platform: apds9960
+    direction: DOWN
+    name: "APDS960 Down Movement"
+  - platform: apds9960
+    direction: LEFT
+    name: "APDS960 Left Movement"
+  - platform: apds9960
+    direction: RIGHT
+    name: "APDS960 Right Movement"
