@@ -1,0 +1,105 @@
+substitutions:
+  devicename: powermeter-bl0906-community
+  location_id: livingroom
+
+esphome:
+  name: $devicename
+
+esp32:
+  variant: esp32
+  flash_size: 8MB
+
+<<: !include common/base.yaml
+
+# Community BL0906 driver in custom/bl0906_community, renamed so it does not
+# clash with ESPHome's built-in bl0906 component.
+external_components:
+  - source:
+      type: local
+      path: custom
+    components: [bl0906_community]
+
+logger:
+  level: DEBUG
+  # Separate ESP32 dev board: UART0/USB stays free for serial logs.
+
+# BL0906 is wired to the dev board's free pins:
+#   ESP32 GPIO26 (TX) -> BL0906 RX (H1.3)
+#   ESP32 GPIO25 (RX) <- BL0906 TX (H1.4)
+#   ESP32 GND         -> BL0906 GND (H1.1)
+# Do NOT use GPIO1/3: they are UART0 and are driven by the dev board's
+# onboard USB-UART bridge, which blocks the BL0906's TX.
+uart:
+  id: uart_bus
+  tx_pin: GPIO26
+  rx_pin: GPIO25
+  baud_rate: 19200
+  stop_bits: 1
+
+# Community driver schema: flat, capitalized keys (no channel_N nesting).
+# Total power/energy are Power_sum / Energy_sum.
+sensor:
+  - platform: bl0906_community
+    uart_id: uart_bus
+    Frequency:
+      name: 'Frequency'
+    Temperature:
+      name: 'Temperature'
+      unit_of_measurement: '°C'
+    Voltage:
+      name: 'Voltage'
+      accuracy_decimals: 1
+    Current_1:
+      name: 'Current_1'
+    Current_2:
+      name: 'Current_2'
+    Current_3:
+      name: 'Current_3'
+    Current_4:
+      name: 'Current_4'
+    Current_5:
+      name: 'Current_5'
+    Current_6:
+      name: 'Current_6'
+    Power_1:
+      name: 'Power_1'
+      accuracy_decimals: 0
+    Power_2:
+      name: 'Power_2'
+      accuracy_decimals: 0
+    Power_3:
+      name: 'Power_3'
+      accuracy_decimals: 0
+    Power_4:
+      name: 'Power_4'
+      accuracy_decimals: 0
+    Power_5:
+      name: 'Power_5'
+      accuracy_decimals: 0
+    Power_6:
+      name: 'Power_6'
+      accuracy_decimals: 0
+    Energy_1:
+      name: 'Energy_1'
+      accuracy_decimals: 3
+      state_class: total_increasing
+    Energy_2:
+      name: 'Energy_2'
+      state_class: total_increasing
+    Energy_3:
+      name: 'Energy_3'
+      state_class: total_increasing
+    Energy_4:
+      name: 'Energy_4'
+      state_class: total_increasing
+    Energy_5:
+      name: 'Energy_5'
+      state_class: total_increasing
+    Energy_6:
+      name: 'Energy_6'
+      state_class: total_increasing
+    Power_sum:
+      name: 'Total_Power'
+    Energy_sum:
+      name: 'Total_Energy'
+      state_class: total_increasing
