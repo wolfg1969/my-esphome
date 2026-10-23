@@ -13,3 +13,6 @@
 **/secrets.yaml
 .python-version
 /*demo*
+
+/.venv/
+/.claude/
