@@ -7,7 +7,7 @@ esphome:
 
 esp32:
   variant: esp32
-  flash_size: 8MB
+  # flash_size: 8MB
 
 <<: !include common/base.yaml
 
@@ -26,6 +26,10 @@ uart:
   rx_pin: GPIO25
   baud_rate: 19200
   stop_bits: 1
+  debug:
+    direction: BOTH
+    after:
+      timeout: 50ms
 
 # Example configuration entry
 sensor:

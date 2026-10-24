@@ -75,6 +75,37 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   //void dump_config() override;
 
  protected:
+  enum ReadKind : uint8_t {
+    READ_U24,
+    READ_S24,
+    READ_FREQUENCY,
+    READ_TEMPERATURE,
+  };
+
+  struct RegisterRead {
+    uint8_t address;
+    float reference;
+    sensor::Sensor *sensor;
+    ReadKind kind;
+  };
+
+  enum class ReadState : uint8_t {
+    IDLE,
+    SEND,
+    WAIT,
+  };
+
+  // 单条寄存器读取的超时；到点就跳过，避免总线异常时卡住。
+  // BL0906 在连续命令下偶尔需要几十 ms 才回，50ms 偏紧，放宽到 150ms。
+  static constexpr uint32_t READ_TIMEOUT_MS = 150;
+  // 正常回复读完后的帧间隔，给 BL0906 内部处理下一条命令留时间
+  static constexpr uint32_t FRAME_GAP_MS = 2;
+  // 超时/校验失败后的重同步间隔，让迟到的回复先到达再被 drain 掉。
+  // 必须大于 BL0906 在连续命令下的最坏回复时间，否则迟到字节会串到下一次读取。
+  static constexpr uint32_t RESYNC_GAP_MS = 60;
+  // 同一条寄存器失败后的重试次数
+  static constexpr uint8_t MAX_RETRIES = 2;
+
   sensor::Sensor *voltage_sensor_{nullptr};
   sensor::Sensor *current_sensor_1_{nullptr};
   sensor::Sensor *current_sensor_2_{nullptr};
@@ -122,14 +153,27 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   
   //有界排空 RX，避免悬空/噪声线持续产生字节导致死循环
   void drain_rx_();
-  //读取数据
-  void read_data(const uint8_t address, const float reference, sensor::Sensor *sensor_);
+  //构建需要读取的寄存器列表（只包含已配置的传感器）
+  void build_reads_();
+  //解析并发布一个寄存器的值；校验失败返回 false
+  bool publish_register_(const RegisterRead &reg, const DataPacket &data);
+  //推进到下一条寄存器；error=true 表示本条失败，需要重试/重同步
+  void advance_read_(bool error = false);
   //偏置校正
-  void Bias_correction(const uint8_t address, const float measurements, const float Correction) ; 
+  void Bias_correction(const uint8_t address, const float measurements, const float Correction) ;
   //增益调整
-  void gain_correction(const uint8_t address, const float measurements, const float Correction, const float coefficient) ; 
-  void received_package_(const DataPacket *data) const;
-  
+  void gain_correction(const uint8_t address, const float measurements, const float Correction, const float coefficient) ;
+
+  RegisterRead reads_[23];
+  uint8_t read_count_{0};
+  uint8_t read_index_{0};
+  ReadState read_state_{ReadState::IDLE};
+  uint32_t read_started_{0};
+  uint32_t next_send_at_{0};
+  uint8_t retries_{0};
+  // 逐字节滑动窗口：用于跳过 TX 回声/悬空噪声，只接受校验和匹配的 4 字节帧
+  uint8_t window_[4]{};
+  uint8_t window_len_{0};
 };
 }  // namespace bl0906_community
 }  // namespace esphome

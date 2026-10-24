@@ -7,7 +7,7 @@ esphome:
 
 esp32:
   variant: esp32
-  flash_size: 8MB
+  # flash_size: 8MB
 
 <<: !include common/base.yaml
 
@@ -21,6 +21,8 @@ external_components:
 
 logger:
   level: DEBUG
+  #logs:
+  #  sensor: VERY_VERBOSE
   # Separate ESP32 dev board: UART0/USB stays free for serial logs.
 
 # BL0906 is wired to the dev board's free pins:
@@ -32,9 +34,17 @@ logger:
 uart:
   id: uart_bus
   tx_pin: GPIO26
-  rx_pin: GPIO25
+  # BL0906 应用笔记要求 UART 模式下 RX/TX 外部上拉；这里至少打开 GPIO25 内部上拉，
+  # 避免 BL0906 未驱动时 RX 悬空、把 GPIO26 的 TX 串扰当成回复。
+  rx_pin:
+    number: GPIO25
+    mode: INPUT_PULLUP
   baud_rate: 19200
   stop_bits: 1
+  # debug:
+  #   direction: BOTH
+  #   after:
+  #     timeout: 50ms
 
 # Community driver schema: flat, capitalized keys (no channel_N nesting).
 # Total power/energy are Power_sum / Energy_sum.

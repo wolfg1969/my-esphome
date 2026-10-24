@@ -11,6 +11,8 @@ uint8_t USR_WRPROT_Onlyread[6]={0xCA, 0x9E, 0x00, 0x00, 0x00, 0x61};  //用户�
 static const uint8_t BL0906_READ_COMMAND = 0x35;  // 读操作命令
 static const uint8_t BL0906_WRITE_COMMAND = 0xCA;  // 写操作命令
 
+uint8_t bl0906_checksum(const uint8_t address, const DataPacket *data);
+
 // BL0906寄存器地址
 static const uint8_t BL0906_I_1_RMS = 0x0D;  //电流 1 通道有效值寄存器地址
 static const uint8_t BL0906_I_2_RMS = 0x0E;  //电流 2 通道有效值寄存器地址
@@ -55,8 +57,69 @@ static const uint8_t BL0906_WATTGN_4 = 0xBA; //有功功率增益调整寄存器
 static const uint8_t BL0906_WATTGN_5 = 0xBD; //有功功率增益调整寄存器,通道5
 static const uint8_t BL0906_WATTGN_6 = 0xBE; //有功功率增益调整寄存器,通道6  
   
+// 非阻塞状态机：每次 loop() 只做一小步（发命令、收 4 字节、推进下一条），
+// 不再在 update() 里连续阻塞读 23 个寄存器。
 void BL0906::loop() {
-//
+  if (this->read_state_ == ReadState::IDLE) {
+    return;
+  }
+
+  if (this->read_state_ == ReadState::SEND) {
+    if (this->read_index_ >= this->read_count_) {
+      this->read_state_ = ReadState::IDLE;
+      return;
+    }
+    // 帧间隔：上一条回复刚读完时不要立刻发下一条，BL0906 需要时间处理
+    if ((int32_t) (millis() - this->next_send_at_) < 0) {
+      return;
+    }
+    // 只排空“已经迟到”的残留字节；正常回复已在 WAIT 中读走，不应再有内容
+    this->drain_rx_();
+    const RegisterRead &reg = this->reads_[this->read_index_];
+    this->window_len_ = 0;
+    this->write_byte(BL0906_READ_COMMAND);
+    this->write_byte(reg.address);
+    this->read_started_ = millis();
+    this->read_state_ = ReadState::WAIT;
+    return;
+  }
+
+  // WAIT：逐字节滑动窗口。
+  // RX 线上可能混入本轮 TX 的回声（0x35 + 地址）或悬空噪声，凑够 4 字节并不代表
+  // 就是回复；只有校验和与当前寄存器匹配的 4 字节才接受，其余字节继续滑动丢弃。
+  const RegisterRead &reg = this->reads_[this->read_index_];
+  while (this->available() > 0) {
+    this->window_[0] = this->window_[1];
+    this->window_[1] = this->window_[2];
+    this->window_[2] = this->window_[3];
+    this->window_[3] = this->read();
+    if (this->window_len_ < 4) {
+      this->window_len_++;
+    }
+    if (this->window_len_ < 4) {
+      continue;
+    }
+
+    DataPacket data;
+    data.l = this->window_[0];
+    data.m = this->window_[1];
+    data.h = this->window_[2];
+    data.checksum = this->window_[3];
+    data.address = reg.address;
+    if (bl0906_checksum(reg.address, &data) == data.checksum) {
+      this->publish_register_(reg, data);
+      this->advance_read_(false);
+      return;
+    }
+  }
+
+  if (millis() - this->read_started_ >= READ_TIMEOUT_MS) {
+    ESP_LOGW(TAG, "Timeout reading register 0x%02X (available=%u)", this->reads_[this->read_index_].address,
+             this->available());
+    this->drain_rx_();
+    this->window_len_ = 0;
+    this->advance_read_(true);
+  }
 }
 
 // 有界排空 RX：悬空/噪声线会持续产生字节，无界的 while(available()) 会卡死并触发 WDT。
@@ -68,9 +131,11 @@ void BL0906::drain_rx_() {
 }
 
 void BL0906::setup() {
-//此处可校正BL0906电参数。
-this->drain_rx_();
-this-> write_array(USR_WRPROT_Witable,sizeof(USR_WRPROT_Witable));//用户寄存器可操作指令
+  // 只把实际配置了传感器的寄存器加入读取列表，未配置的通道不再占用总线
+  this->build_reads_();
+  //此处可校正BL0906电参数。
+  this->drain_rx_();
+  this->write_array(USR_WRPROT_Witable, sizeof(USR_WRPROT_Witable));  //用户寄存器可操作指令
   //电参数校正（参数1：寄存器地址；参数2：校正前值；参数3：校正后值、电参数值与寄存器值的转换系数)
 //Bias_correction(BL0906_RMSOS_1, 0.01960, 0);//电流有效值偏置校正，通道1
 //Bias_correction(BL0906_RMSOS_2, 0.02673, 0);//电流有效值偏置校正，通道2
@@ -90,35 +155,84 @@ this-> write_array(USR_WRPROT_Witable,sizeof(USR_WRPROT_Witable));//用户寄存
 //gain_correction(BL0906_WATTGN_4, 16.57646, 14.5, BL0906_Kp);//功率增益调整，通道4
 //gain_correction(BL0906_WATTGN_5, 15.27440, 14.5, BL0906_Kp);//功率增益调整，通道5
 //gain_correction(BL0906_WATTGN_6, 31.75744, 14.5, BL0906_Kp);//功率增益调整，通道6
-this-> write_array(USR_WRPROT_Onlyread,sizeof(USR_WRPROT_Onlyread));//用户寄存器只读指令
+  this->write_array(USR_WRPROT_Onlyread, sizeof(USR_WRPROT_Onlyread));  //用户寄存器只读指令
+  this->read_state_ = ReadState::IDLE;
 }
 
+void BL0906::build_reads_() {
+  uint8_t n = 0;
+  auto add = [&](uint8_t address, float reference, sensor::Sensor *sensor, ReadKind kind) {
+    if (sensor == nullptr || n >= (sizeof(this->reads_) / sizeof(this->reads_[0]))) {
+      return;
+    }
+    this->reads_[n++] = RegisterRead{address, reference, sensor, kind};
+  };
+
+  add(BL0906_FREQUENCY, this->frequency_reference_, this->frequency_sensor_, READ_FREQUENCY);
+  add(BL0906_TEMPERATURE, 0.0f, this->temperature_sensor_, READ_TEMPERATURE);
+  add(BL0906_V_RMS, this->voltage_reference_, this->voltage_sensor_, READ_U24);
+  add(BL0906_I_1_RMS, this->current_reference_, this->current_sensor_1_, READ_U24);
+  add(BL0906_I_2_RMS, this->current_reference_, this->current_sensor_2_, READ_U24);
+  add(BL0906_I_3_RMS, this->current_reference_, this->current_sensor_3_, READ_U24);
+  add(BL0906_I_4_RMS, this->current_reference_, this->current_sensor_4_, READ_U24);
+  add(BL0906_I_5_RMS, this->current_reference_, this->current_sensor_5_, READ_U24);
+  add(BL0906_I_6_RMS, this->current_reference_, this->current_sensor_6_, READ_U24);
+  add(BL0906_WATT_1, this->power_reference_, this->power_sensor_1_, READ_S24);
+  add(BL0906_WATT_2, this->power_reference_, this->power_sensor_2_, READ_S24);
+  add(BL0906_WATT_3, this->power_reference_, this->power_sensor_3_, READ_S24);
+  add(BL0906_WATT_4, this->power_reference_, this->power_sensor_4_, READ_S24);
+  add(BL0906_WATT_5, this->power_reference_, this->power_sensor_5_, READ_S24);
+  add(BL0906_WATT_6, this->power_reference_, this->power_sensor_6_, READ_S24);
+  add(BL0906_WATT_SUM, this->power_sum_reference_, this->power_sensor_sum_, READ_S24);
+  add(BL0906_CF_1_CNT, this->energy_reference_, this->energy_sensor_1_, READ_U24);
+  add(BL0906_CF_2_CNT, this->energy_reference_, this->energy_sensor_2_, READ_U24);
+  add(BL0906_CF_3_CNT, this->energy_reference_, this->energy_sensor_3_, READ_U24);
+  add(BL0906_CF_4_CNT, this->energy_reference_, this->energy_sensor_4_, READ_U24);
+  add(BL0906_CF_5_CNT, this->energy_reference_, this->energy_sensor_5_, READ_U24);
+  add(BL0906_CF_6_CNT, this->energy_reference_, this->energy_sensor_6_, READ_U24);
+  add(BL0906_CF_SUM_CNT, this->energy_sum_reference_, this->energy_sensor_sum_, READ_U24);
+
+  this->read_count_ = n;
+  this->read_index_ = 0;
+  this->retries_ = 0;
+  this->next_send_at_ = 0;
+  this->window_len_ = 0;
+  this->read_state_ = ReadState::IDLE;
+}
 
 void BL0906::update() {
+  // 只启动一轮读取，真正的收发在 loop() 里分步完成，避免阻塞主循环
   this->drain_rx_();
-  read_data(BL0906_FREQUENCY, frequency_reference_, frequency_sensor_ ); //频率
-  read_data(BL0906_TEMPERATURE, temperature_reference_, temperature_sensor_); //温度
-  read_data(BL0906_V_RMS, voltage_reference_, voltage_sensor_); //电压
-  read_data(BL0906_I_1_RMS, current_reference_, current_sensor_1_ ); //电流,通道1
-  read_data(BL0906_I_2_RMS, current_reference_, current_sensor_2_ ); //电流,通道2
-  read_data(BL0906_I_3_RMS, current_reference_, current_sensor_3_ ); //电流,通道3
-  read_data(BL0906_I_4_RMS, current_reference_, current_sensor_4_ ); //电流,通道4
-  read_data(BL0906_I_5_RMS, current_reference_, current_sensor_5_ ); //电流,通道5
-  read_data(BL0906_I_6_RMS, current_reference_, current_sensor_6_ ); //电流,通道6
-  read_data(BL0906_WATT_1, power_reference_, power_sensor_1_ );//功率。通道1 
-  read_data(BL0906_WATT_2, power_reference_, power_sensor_2_ );//功率。通道2 
-  read_data(BL0906_WATT_3, power_reference_, power_sensor_3_ );//功率。通道3 
-  read_data(BL0906_WATT_4, power_reference_, power_sensor_4_ );//功率。通道4 
-  read_data(BL0906_WATT_5, power_reference_, power_sensor_5_ );//功率。通道5 
-  read_data(BL0906_WATT_6, power_reference_, power_sensor_6_ );//功率。通道6 
-  read_data(BL0906_WATT_SUM, power_sum_reference_, power_sensor_sum_ );//功率。通道总和
-  read_data(BL0906_CF_1_CNT, energy_reference_, energy_sensor_1_ ); //电量。通道1
-  read_data(BL0906_CF_2_CNT, energy_reference_, energy_sensor_2_ ); //电量。通道2
-  read_data(BL0906_CF_3_CNT, energy_reference_, energy_sensor_3_ ); //电量。通道3
-  read_data(BL0906_CF_4_CNT, energy_reference_, energy_sensor_4_ ); //电量。通道4
-  read_data(BL0906_CF_5_CNT, energy_reference_, energy_sensor_5_ ); //电量。通道5
-  read_data(BL0906_CF_6_CNT, energy_reference_, energy_sensor_6_ ); //电量。通道6
-  read_data(BL0906_CF_SUM_CNT, energy_sum_reference_, energy_sensor_sum_ ); //电量。通道总和
+  if (this->read_count_ == 0) {
+    return;
+  }
+  this->read_index_ = 0;
+  this->retries_ = 0;
+  this->next_send_at_ = 0;  // 新一轮可以立即发第一条
+  this->window_len_ = 0;
+  this->read_state_ = ReadState::SEND;
+}
+
+void BL0906::advance_read_(bool error) {
+  // 失败时先重试同一条寄存器，避免一次偶发错位把整轮读取带偏
+  if (error && this->retries_ < MAX_RETRIES) {
+    this->retries_++;
+    ESP_LOGW(TAG, "Retrying register 0x%02X (%u/%u)", this->reads_[this->read_index_].address,
+             this->retries_, MAX_RETRIES);
+    this->read_state_ = ReadState::SEND;
+    this->next_send_at_ = millis() + RESYNC_GAP_MS;
+    return;
+  }
+
+  this->retries_ = 0;
+  this->read_index_++;
+  if (this->read_index_ >= this->read_count_) {
+    this->read_index_ = 0;
+    this->read_state_ = ReadState::IDLE;
+  } else {
+    this->read_state_ = ReadState::SEND;
+    this->next_send_at_ = millis() + FRAME_GAP_MS;
+  }
 }
 
   //校验和。SUM 字节为（Addr+Data_L+Data_M+Data_H）&0xFF 取反
@@ -126,91 +240,54 @@ uint8_t bl0906_checksum(const uint8_t address, const DataPacket *data) {
   return (address + data->l + data->m + data->h) ^ 0xFF; 
 }
   
-//读取数据
-void BL0906::read_data(const uint8_t address, const float reference, sensor::Sensor *sensor_) {
-  DataPacket buffer;
-  ube24_t data_u24;
-  sbe24_t data_s24;
-  float value=0;
-  //读取功率（单通道与总功率）
-  if (reference == power_reference_ || reference == power_sum_reference_){
-    this-> write_byte(BL0906_READ_COMMAND);
-    this-> write_byte(address);
-    if (this-> read_array((uint8_t *) &buffer, sizeof(buffer)-1))  {      
-      if (bl0906_checksum(address,&buffer)==buffer.checksum) {
-        data_s24.l = buffer.l;
-        data_s24.m = buffer.m;
-        data_s24.h = buffer.h;
-        value = (float) to_int32_t(data_s24) * reference;
-        if (sensor_ != nullptr) {
-          sensor_->publish_state(value);
-        }      
-      }
-    } else {
-      ESP_LOGW(TAG, "Junk on wire. Throwing away partial power message");
-      this->drain_rx_();
-    } 
+//解析并发布一条寄存器回复
+bool BL0906::publish_register_(const RegisterRead &reg, const DataPacket &data) {
+  if (bl0906_checksum(reg.address, &data) != data.checksum) {
+    ESP_LOGW(TAG, "Checksum mismatch for register 0x%02X: %02X %02X %02X %02X (expected %02X)", reg.address, data.l,
+             data.m, data.h, data.checksum, bl0906_checksum(reg.address, &data));
+    return false;
   }
-  //读取电压、电流、单通道电量、总电量
-  if (reference == voltage_reference_ || reference == current_reference_ || reference == energy_reference_ || reference == energy_sum_reference_) {
-    this-> write_byte(BL0906_READ_COMMAND);
-    this-> write_byte(address);
-    if (this-> read_array((uint8_t *) &buffer, sizeof(buffer)-1))  {    
-    //ESP_LOGW(TAG, "checksum= 0x%02X", bl0906_checksum(BL0906_V_RMS,&buffer));      
-      if (bl0906_checksum(address,&buffer)==buffer.checksum) {
-        data_u24.l = buffer.l;
-        data_u24.m = buffer.m;
-        data_u24.h = buffer.h;
-        value = (float) to_uint32_t(data_u24) * reference;
-        if (sensor_ != nullptr) {
-          sensor_->publish_state(value);
-        }      
+
+  ube24_t u24;
+  u24.l = data.l;
+  u24.m = data.m;
+  u24.h = data.h;
+
+  sbe24_t s24;
+  s24.l = data.l;
+  s24.m = data.m;
+  s24.h = (int8_t) data.h;
+
+  float value;
+  switch (reg.kind) {
+    case READ_S24:
+      value = (float) to_int32_t(s24) * reg.reference;
+      break;
+    case READ_FREQUENCY: {
+      uint32_t raw = to_uint32_t(u24);
+      if (raw == 0) {
+        ESP_LOGW(TAG, "Frequency register is zero");
+        return true;  // 回复本身校验正确，只是数值不可用，不需要重试
       }
-    } else {
-      ESP_LOGW(TAG, "Junk on wire. Throwing away partial message");
-      this->drain_rx_();
-    }     
-  }  
-    //读取频率
-  if (reference == frequency_reference_) {
-    this-> write_byte(BL0906_READ_COMMAND);
-    this-> write_byte(address);
-    if (this-> read_array((uint8_t *) &buffer, sizeof(buffer)-1))  {    
-      if (bl0906_checksum(address,&buffer)==buffer.checksum) {
-        data_u24.l = buffer.l;
-        data_u24.m = buffer.m;
-        data_u24.h = buffer.h;
-        value = reference / (float) to_uint32_t(data_u24);
-        if (sensor_ != nullptr) {
-          sensor_->publish_state(value);
-        }      
-      }
-    } else {
-      ESP_LOGW(TAG, "Junk on wire. Throwing frequency message");
-      this->drain_rx_();
-    }     
+      value = reg.reference / (float) raw;
+      break;
+    }
+    case READ_TEMPERATURE:
+      value = ((float) to_int32_t(s24) - 64.0f) * 12.5f / 59.0f - 40.0f;
+      break;
+    case READ_U24:
+    default:
+      value = (float) to_uint32_t(u24) * reg.reference;
+      break;
   }
-    //读取芯片温度
-  if (reference == temperature_reference_) {
-    this-> write_byte(BL0906_READ_COMMAND);
-    this-> write_byte(address);
-    if (this-> read_array((uint8_t *) &buffer, sizeof(buffer)-1))  {    
-      if (bl0906_checksum(address,&buffer)==buffer.checksum) {
-        data_s24.l = buffer.l;
-        data_s24.m = buffer.m;
-        data_s24.h = buffer.h;
-        value = (float) to_int32_t(data_s24);
-        value = (value - 64) *12.5/59-40;  
-        if (sensor_ != nullptr) {
-          sensor_->publish_state(value);
-        }      
-      }
-    } else {
-      ESP_LOGW(TAG, "Junk on wire. Throwing frequency message");
-      this->drain_rx_();
-    }     
-  }  
-}  
+
+  ESP_LOGD(TAG, "0x%02X = %.4f", reg.address, value);
+
+  if (reg.sensor != nullptr) {
+    reg.sensor->publish_state(value);
+  }
+  return true;
+}
 //有效值偏置校正
 void BL0906::Bias_correction(const uint8_t address, const float measurements, const float Correction) {
   DataPacket data;  

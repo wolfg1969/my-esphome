@@ -16,5 +16,6 @@
 
 /.venv/
 /.claude/
+/.easyeda/
 
 **/__pycache__/
