@@ -1,3 +1,4 @@
+# not used
 substitutions:
   devicename: "gesture-switch"
   friendly_name: "Gesture Switch"

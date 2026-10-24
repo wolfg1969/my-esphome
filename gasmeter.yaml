@@ -1,3 +1,4 @@
+# not used
 substitutions:
   devicename: "gas-meter"
   friendly_name: "Gas meter"

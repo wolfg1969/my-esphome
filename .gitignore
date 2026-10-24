@@ -15,7 +15,8 @@
 /*demo*
 
 /.venv/
-/.claude/
+/.claude/*
+!/.claude/skills/
 /.easyeda/
 
 **/__pycache__/
