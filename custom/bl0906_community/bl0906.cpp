@@ -76,7 +76,10 @@ void BL0906::loop() {
     // 只排空“已经迟到”的残留字节；正常回复已在 WAIT 中读走，不应再有内容
     this->drain_rx_();
     const RegisterRead &reg = this->reads_[this->read_index_];
+    // 清空滑动窗口，超时日志里的 last= 才是本次尝试实际收到的字节
+    this->window_[0] = this->window_[1] = this->window_[2] = this->window_[3] = 0;
     this->window_len_ = 0;
+    this->rx_bytes_ = 0;
     this->write_byte(BL0906_READ_COMMAND);
     this->write_byte(reg.address);
     this->read_started_ = millis();
@@ -93,6 +96,7 @@ void BL0906::loop() {
     this->window_[1] = this->window_[2];
     this->window_[2] = this->window_[3];
     this->window_[3] = this->read();
+    this->rx_bytes_++;
     if (this->window_len_ < 4) {
       this->window_len_++;
     }
@@ -114,8 +118,9 @@ void BL0906::loop() {
   }
 
   if (millis() - this->read_started_ >= READ_TIMEOUT_MS) {
-    ESP_LOGW(TAG, "Timeout reading register 0x%02X (available=%u)", this->reads_[this->read_index_].address,
-             this->available());
+    ESP_LOGW(TAG, "Timeout reading register 0x%02X (available=%u, rx_bytes=%u, last=%02X %02X %02X %02X)",
+             this->reads_[this->read_index_].address, this->available(), this->rx_bytes_, this->window_[0],
+             this->window_[1], this->window_[2], this->window_[3]);
     this->drain_rx_();
     this->window_len_ = 0;
     this->advance_read_(true);

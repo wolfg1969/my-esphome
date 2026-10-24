@@ -174,6 +174,8 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   // 逐字节滑动窗口：用于跳过 TX 回声/悬空噪声，只接受校验和匹配的 4 字节帧
   uint8_t window_[4]{};
   uint8_t window_len_{0};
+  // 本次尝试实际收到的字节数（用于区分“完全没信号”和“有信号但都是错帧”）
+  uint16_t rx_bytes_{0};
 };
 }  // namespace bl0906_community
 }  // namespace esphome
