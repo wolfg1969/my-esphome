@@ -306,7 +306,7 @@ void BL0906::Bias_correction(const uint8_t address, const float measurements, co
     data.h = (value << 8 >>24)|0b10000000;    
   }  
   data.address = bl0906_checksum(address, &data);
-  ESP_LOGW(TAG, "RMSOS:%02X%02X%02X%02X%02X%02X",BL0906_WRITE_COMMAND,address,data.l ,data.m, data.h,data.address );
+  ESP_LOGD(TAG, "RMSOS:%02X%02X%02X%02X%02X%02X",BL0906_WRITE_COMMAND,address,data.l ,data.m, data.h,data.address );
   this-> write_byte(BL0906_WRITE_COMMAND);
   this-> write_byte(address);
   this-> write_byte(data.l);
@@ -330,7 +330,7 @@ void BL0906::gain_correction(const uint8_t address, const float measurements, co
   data.m = value >> 8;
   data.l = value << 8 >>8;  
   data.address = bl0906_checksum(address, &data);
-  //ESP_LOGW(TAG, "RMSOS:%02X%02X%02X%02X%02X%02X",BL0906_WRITE_COMMAND,address,data.l ,data.m, data.h,data.address );
+  //ESP_LOGD(TAG, "RMSOS:%02X%02X%02X%02X%02X%02X",BL0906_WRITE_COMMAND,address,data.l ,data.m, data.h,data.address );
   this-> write_byte(BL0906_WRITE_COMMAND);
   this-> write_byte(address);
   this-> write_byte(data.l);
