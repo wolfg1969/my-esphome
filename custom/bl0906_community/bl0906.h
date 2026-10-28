@@ -108,8 +108,9 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   static constexpr uint32_t RESYNC_GAP_MS = 60;
   // 同一条寄存器失败后的重试次数
   static constexpr uint8_t MAX_RETRIES = 2;
-  // 活动指示灯在最后一个 RX 字节之后保持点亮的时间
-  static constexpr uint32_t ACTIVITY_HOLD_MS = 100;
+  // 活动指示灯每收到一个有效帧闪亮的时长。
+  // 一轮里寄存器间隔约 20ms，必须短于它，否则相邻帧会连成常亮。
+  static constexpr uint32_t ACTIVITY_FLASH_MS = 10;
 
   sensor::Sensor *voltage_sensor_{nullptr};
   sensor::Sensor *current_sensor_1_{nullptr};
@@ -135,9 +136,9 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   sensor::Sensor *frequency_sensor_{nullptr};
   sensor::Sensor *temperature_sensor_{nullptr};
 
-  // 活动指示灯（可选）：收到 UART 数据时点亮
+  // 活动指示灯（可选）：每收到一个校验通过的有效帧闪一次
   GPIOPin *activity_pin_{nullptr};
-  uint32_t activity_last_rx_{0};
+  uint32_t activity_last_flash_{0};
   bool activity_on_{false};
 
   // 乘以该值以转换为实际功率值(W)

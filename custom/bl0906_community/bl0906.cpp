@@ -60,9 +60,9 @@ static const uint8_t BL0906_WATTGN_6 = 0xBE; //有功功率增益调整寄存器
 // 非阻塞状态机：每次 loop() 只做一小步（发命令、收 4 字节、推进下一条），
 // 不再在 update() 里连续阻塞读 23 个寄存器。
 void BL0906::loop() {
-  // 收到最后一个字节后保持 ACTIVITY_HOLD_MS，然后熄灭
+  // 每个有效帧闪一下：点亮 ACTIVITY_FLASH_MS 后熄灭
   if (this->activity_pin_ != nullptr && this->activity_on_ &&
-      (uint32_t) (millis() - this->activity_last_rx_) >= ACTIVITY_HOLD_MS) {
+      (uint32_t) (millis() - this->activity_last_flash_) >= ACTIVITY_FLASH_MS) {
     this->activity_pin_->digital_write(false);
     this->activity_on_ = false;
   }
@@ -104,13 +104,6 @@ void BL0906::loop() {
     this->window_[2] = this->window_[3];
     this->window_[3] = this->read();
     this->rx_bytes_++;
-    if (this->activity_pin_ != nullptr) {
-      this->activity_last_rx_ = millis();
-      if (!this->activity_on_) {
-        this->activity_pin_->digital_write(true);
-        this->activity_on_ = true;
-      }
-    }
     if (this->window_len_ < 4) {
       this->window_len_++;
     }
@@ -125,6 +118,14 @@ void BL0906::loop() {
     data.checksum = this->window_[3];
     data.address = reg.address;
     if (bl0906_checksum(reg.address, &data) == data.checksum) {
+      // 校验通过的有效帧：指示灯闪一次（每个寄存器一帧，一轮 23 次）
+      if (this->activity_pin_ != nullptr) {
+        this->activity_last_flash_ = millis();
+        if (!this->activity_on_) {
+          this->activity_pin_->digital_write(true);
+          this->activity_on_ = true;
+        }
+      }
       this->publish_register_(reg, data);
       this->advance_read_(false);
       return;
@@ -150,7 +151,7 @@ void BL0906::drain_rx_() {
 }
 
 void BL0906::setup() {
-  // 活动指示灯：默认熄灭；收到的每个 UART 字节会在 WAIT 中点亮
+  // 活动指示灯：默认熄灭；每收到一个校验通过的有效帧闪一次
   if (this->activity_pin_ != nullptr) {
     this->activity_pin_->setup();
     this->activity_pin_->digital_write(false);
