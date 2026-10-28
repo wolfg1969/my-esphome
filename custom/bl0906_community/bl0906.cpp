@@ -206,6 +206,8 @@ void BL0906::build_reads_() {
 }
 
 void BL0906::update() {
+  // 构建标记：每轮读取打印一次，便于确认 OTA 后实际运行的固件（尤其排查 OTA 回滚）
+  ESP_LOGI(TAG, "build %s %s", __DATE__, __TIME__);
   // 只启动一轮读取，真正的收发在 loop() 里分步完成，避免阻塞主循环
   this->drain_rx_();
   if (this->read_count_ == 0) {

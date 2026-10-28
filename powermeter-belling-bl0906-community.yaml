@@ -7,6 +7,9 @@ esphome:
 
 esp32:
   variant: esp32
+  # framework:
+  #   advanced:
+  #     minimum_chip_revision: "3.1"
   # flash_size: 8MB
 
 <<: !include common/base.yaml
@@ -34,8 +37,6 @@ logger:
 uart:
   id: uart_bus
   tx_pin: GPIO26
-  # BL0906 应用笔记要求 UART 模式下 RX/TX 外部上拉；这里至少打开 GPIO25 内部上拉，
-  # 避免 BL0906 未驱动时 RX 悬空、把 GPIO26 的 TX 串扰当成回复。
   rx_pin:
     number: GPIO25
     mode: INPUT_PULLUP
@@ -45,6 +46,14 @@ uart:
   #   direction: BOTH
   #   after:
   #     timeout: 50ms
+# uart:
+#   id: uart_bus
+#   tx_pin: GPIO1
+#   rx_pin:
+#     number: GPIO3
+#     mode: INPUT_PULLUP
+#   baud_rate: 19200
+#   stop_bits: 1
 
 # Community driver schema: flat, capitalized keys (no channel_N nesting).
 # Total power/energy are Power_sum / Energy_sum.
