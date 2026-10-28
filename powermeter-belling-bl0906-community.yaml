@@ -60,6 +60,10 @@ uart:
 sensor:
   - platform: bl0906_community
     uart_id: uart_bus
+    # UART 收到数据时点亮的活动指示灯（按实际 LED 极性调整 inverted）
+    #activity_pin:
+    #  number: GPIO18
+    #  inverted: true
     Frequency:
       name: 'Frequency'
     Temperature:

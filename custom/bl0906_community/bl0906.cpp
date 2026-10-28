@@ -60,6 +60,13 @@ static const uint8_t BL0906_WATTGN_6 = 0xBE; //有功功率增益调整寄存器
 // 非阻塞状态机：每次 loop() 只做一小步（发命令、收 4 字节、推进下一条），
 // 不再在 update() 里连续阻塞读 23 个寄存器。
 void BL0906::loop() {
+  // 收到最后一个字节后保持 ACTIVITY_HOLD_MS，然后熄灭
+  if (this->activity_pin_ != nullptr && this->activity_on_ &&
+      (uint32_t) (millis() - this->activity_last_rx_) >= ACTIVITY_HOLD_MS) {
+    this->activity_pin_->digital_write(false);
+    this->activity_on_ = false;
+  }
+
   if (this->read_state_ == ReadState::IDLE) {
     return;
   }
@@ -97,6 +104,13 @@ void BL0906::loop() {
     this->window_[2] = this->window_[3];
     this->window_[3] = this->read();
     this->rx_bytes_++;
+    if (this->activity_pin_ != nullptr) {
+      this->activity_last_rx_ = millis();
+      if (!this->activity_on_) {
+        this->activity_pin_->digital_write(true);
+        this->activity_on_ = true;
+      }
+    }
     if (this->window_len_ < 4) {
       this->window_len_++;
     }
@@ -136,6 +150,11 @@ void BL0906::drain_rx_() {
 }
 
 void BL0906::setup() {
+  // 活动指示灯：默认熄灭；收到的每个 UART 字节会在 WAIT 中点亮
+  if (this->activity_pin_ != nullptr) {
+    this->activity_pin_->setup();
+    this->activity_pin_->digital_write(false);
+  }
   // 只把实际配置了传感器的寄存器加入读取列表，未配置的通道不再占用总线
   this->build_reads_();
   //此处可校正BL0906电参数。

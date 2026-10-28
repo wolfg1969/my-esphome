@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esphome/core/component.h"
+#include "esphome/core/hal.h"
 #include "esphome/components/uart/uart.h"
 #include "esphome/components/sensor/sensor.h"
 
@@ -68,6 +69,8 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   void set_energy_sensor_sum(sensor::Sensor *energy_sensor_sum) { energy_sensor_sum_ = energy_sensor_sum; }
   void set_frequency_sensor(sensor::Sensor *frequency_sensor) { frequency_sensor_ = frequency_sensor; }
   void set_temperature_sensor(sensor::Sensor *temperature_sensor) { temperature_sensor_ = temperature_sensor; }
+  // 可选活动指示灯：UART 每收到一个字节就点亮，最后一个字节后保持 ACTIVITY_HOLD_MS
+  void set_activity_pin(GPIOPin *activity_pin) { activity_pin_ = activity_pin; }
   void loop() override;
 
   void update() override;
@@ -105,6 +108,8 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   static constexpr uint32_t RESYNC_GAP_MS = 60;
   // 同一条寄存器失败后的重试次数
   static constexpr uint8_t MAX_RETRIES = 2;
+  // 活动指示灯在最后一个 RX 字节之后保持点亮的时间
+  static constexpr uint32_t ACTIVITY_HOLD_MS = 100;
 
   sensor::Sensor *voltage_sensor_{nullptr};
   sensor::Sensor *current_sensor_1_{nullptr};
@@ -129,6 +134,11 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   sensor::Sensor *energy_sensor_sum_{nullptr};
   sensor::Sensor *frequency_sensor_{nullptr};
   sensor::Sensor *temperature_sensor_{nullptr};
+
+  // 活动指示灯（可选）：收到 UART 数据时点亮
+  GPIOPin *activity_pin_{nullptr};
+  uint32_t activity_last_rx_{0};
+  bool activity_on_{false};
 
   // 乘以该值以转换为实际功率值(W)
   float power_reference_ = BL0906_PREF;

@@ -1,5 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
+from esphome import pins
 from esphome.components import sensor, uart
 from esphome.const import (
     UNIT_PERCENT,
@@ -18,6 +19,8 @@ CONFIG_SCHEMA = (
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(BL0906),
+            # 可选：UART 收到数据时点亮的活动指示灯（LED 接 GPIO18 等）
+            cv.Optional("activity_pin"): pins.gpio_output_pin_schema,
             cv.Optional("Frequency"): sensor.sensor_schema(
             accuracy_decimals = 0,
             device_class = "frequency",
@@ -150,6 +153,9 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
+    if "activity_pin" in config:
+        pin = await cg.gpio_pin_expression(config["activity_pin"])
+        cg.add(var.set_activity_pin(pin))
     if "Frequency" in config:
         sens = await sensor.new_sensor(config["Frequency"])
         cg.add(var.set_frequency_sensor(sens))
