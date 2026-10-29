@@ -7,10 +7,11 @@ esphome:
 
 esp32:
   variant: esp32
+  flash_size: 8MB
   # framework:
   #   advanced:
   #     minimum_chip_revision: "3.1"
-  # flash_size: 8MB
+  
 
 <<: !include common/base.yaml
 
