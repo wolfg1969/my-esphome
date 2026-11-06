@@ -109,8 +109,9 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   // 同一条寄存器失败后的重试次数
   static constexpr uint8_t MAX_RETRIES = 2;
   // 活动指示灯每收到一个有效帧闪亮的时长。
-  // 一轮里寄存器间隔约 20ms，必须短于它，否则相邻帧会连成常亮。
-  static constexpr uint32_t ACTIVITY_FLASH_MS = 10;
+  // 18ms 略短于实际帧间隔（约 20ms）：整轮读取期间接近连续亮起，又不会拖到下一帧；
+  // 3kΩ 限流时电流仅约 0.45mA，靠“亮满整轮”而不是单帧亮度来保证可见。
+  static constexpr uint32_t ACTIVITY_FLASH_MS = 18;
 
   sensor::Sensor *voltage_sensor_{nullptr};
   sensor::Sensor *current_sensor_1_{nullptr};
