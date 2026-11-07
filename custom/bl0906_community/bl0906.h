@@ -69,7 +69,7 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   void set_energy_sensor_sum(sensor::Sensor *energy_sensor_sum) { energy_sensor_sum_ = energy_sensor_sum; }
   void set_frequency_sensor(sensor::Sensor *frequency_sensor) { frequency_sensor_ = frequency_sensor; }
   void set_temperature_sensor(sensor::Sensor *temperature_sensor) { temperature_sensor_ = temperature_sensor; }
-  // 可选活动指示灯：UART 每收到一个字节就点亮，最后一个字节后保持 ACTIVITY_HOLD_MS
+  // 可选活动指示灯：串口正常后常亮，整轮轮询期间熄灭；连续两轮无有效帧则熄灭
   void set_activity_pin(GPIOPin *activity_pin) { activity_pin_ = activity_pin; }
   void loop() override;
 
@@ -108,10 +108,10 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   static constexpr uint32_t RESYNC_GAP_MS = 60;
   // 同一条寄存器失败后的重试次数
   static constexpr uint8_t MAX_RETRIES = 2;
-  // 活动指示灯每收到一个有效帧闪亮的时长。
-  // 18ms 略短于实际帧间隔（约 20ms）：整轮读取期间接近连续亮起，又不会拖到下一帧；
-  // 3kΩ 限流时电流仅约 0.45mA，靠“亮满整轮”而不是单帧亮度来保证可见。
-  static constexpr uint32_t ACTIVITY_FLASH_MS = 18;
+  // 活动指示灯：串口正常（收到过有效帧）后常亮，整轮轮询期间熄灭。
+  // 连续 2 轮都没有任何有效帧视为串口故障，保持熄灭；再收到有效帧自动恢复常亮。
+  // 3kΩ 限流时电流仅约 0.45mA，常亮功耗可忽略。
+  static constexpr uint8_t ACTIVITY_MAX_BAD_ROUNDS = 2;
 
   sensor::Sensor *voltage_sensor_{nullptr};
   sensor::Sensor *current_sensor_1_{nullptr};
@@ -137,10 +137,12 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   sensor::Sensor *frequency_sensor_{nullptr};
   sensor::Sensor *temperature_sensor_{nullptr};
 
-  // 活动指示灯（可选）：每收到一个校验通过的有效帧闪一次
+  // 活动指示灯（可选）：串口正常后常亮，轮询期间熄灭；连续两轮无有效帧则熄灭
   GPIOPin *activity_pin_{nullptr};
-  uint32_t activity_last_flash_{0};
-  bool activity_on_{false};
+  bool activity_healthy_{false};      // 收到过有效帧，且未连续两轮失败
+  bool activity_round_valid_{false};  // 本轮是否收到过有效帧
+  bool activity_on_{false};           // 当前引脚输出状态（去重写用）
+  uint8_t activity_bad_rounds_{0};    // 连续无有效帧的轮数
 
   // 乘以该值以转换为实际功率值(W)
   float power_reference_ = BL0906_PREF;
@@ -171,6 +173,10 @@ class BL0906 : public PollingComponent, public uart::UARTDevice {
   bool publish_register_(const RegisterRead &reg, const DataPacket &data);
   //推进到下一条寄存器；error=true 表示本条失败，需要重试/重同步
   void advance_read_(bool error = false);
+  //活动指示灯：写引脚并去重
+  void set_activity_(bool on);
+  //一轮读取结束：更新健康状态并回到 IDLE
+  void end_round_();
   //偏置校正
   void Bias_correction(const uint8_t address, const float measurements, const float Correction) ;
   //增益调整

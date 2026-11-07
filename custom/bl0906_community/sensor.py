@@ -19,7 +19,7 @@ CONFIG_SCHEMA = (
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(BL0906),
-            # 可选：每收到一个有效帧闪一次的活动指示灯（LED 接 GPIO18 等）
+            # 可选：串口正常后常亮、轮询期间熄灭的活动指示灯（LED 接 GPIO18 等）
             cv.Optional("activity_pin"): pins.gpio_output_pin_schema,
             cv.Optional("Frequency"): sensor.sensor_schema(
             accuracy_decimals = 0,

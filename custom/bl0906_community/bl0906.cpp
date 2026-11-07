@@ -57,15 +57,38 @@ static const uint8_t BL0906_WATTGN_4 = 0xBA; //有功功率增益调整寄存器
 static const uint8_t BL0906_WATTGN_5 = 0xBD; //有功功率增益调整寄存器,通道5
 static const uint8_t BL0906_WATTGN_6 = 0xBE; //有功功率增益调整寄存器,通道6  
   
+void BL0906::set_activity_(bool on) {
+  if (this->activity_pin_ == nullptr || this->activity_on_ == on) {
+    return;
+  }
+  this->activity_pin_->digital_write(on);
+  this->activity_on_ = on;
+}
+
+// 一轮读取结束：本轮有有效帧就恢复健康；连续 ACTIVITY_MAX_BAD_ROUNDS 轮
+// 都没有有效帧则判定串口故障，指示灯保持熄灭。
+void BL0906::end_round_() {
+  if (this->activity_pin_ != nullptr) {
+    if (this->activity_round_valid_) {
+      this->activity_healthy_ = true;
+      this->activity_bad_rounds_ = 0;
+    } else if (this->activity_healthy_) {
+      this->activity_bad_rounds_++;
+      if (this->activity_bad_rounds_ >= ACTIVITY_MAX_BAD_ROUNDS) {
+        this->activity_healthy_ = false;
+      }
+    }
+    this->set_activity_(this->activity_healthy_);
+  }
+  this->activity_round_valid_ = false;
+  this->read_state_ = ReadState::IDLE;
+}
+
 // 非阻塞状态机：每次 loop() 只做一小步（发命令、收 4 字节、推进下一条），
 // 不再在 update() 里连续阻塞读 23 个寄存器。
 void BL0906::loop() {
-  // 每个有效帧闪一下：点亮 ACTIVITY_FLASH_MS 后熄灭
-  if (this->activity_pin_ != nullptr && this->activity_on_ &&
-      (uint32_t) (millis() - this->activity_last_flash_) >= ACTIVITY_FLASH_MS) {
-    this->activity_pin_->digital_write(false);
-    this->activity_on_ = false;
-  }
+  // 活动指示灯：IDLE 且串口健康时常亮；整轮轮询期间熄灭
+  this->set_activity_(this->read_state_ == ReadState::IDLE && this->activity_healthy_);
 
   if (this->read_state_ == ReadState::IDLE) {
     return;
@@ -73,7 +96,7 @@ void BL0906::loop() {
 
   if (this->read_state_ == ReadState::SEND) {
     if (this->read_index_ >= this->read_count_) {
-      this->read_state_ = ReadState::IDLE;
+      this->end_round_();
       return;
     }
     // 帧间隔：上一条回复刚读完时不要立刻发下一条，BL0906 需要时间处理
@@ -118,13 +141,11 @@ void BL0906::loop() {
     data.checksum = this->window_[3];
     data.address = reg.address;
     if (bl0906_checksum(reg.address, &data) == data.checksum) {
-      // 校验通过的有效帧：指示灯闪一次（每个寄存器一帧，一轮 23 次）
+      // 校验通过的有效帧：本轮有数据；灯保持熄灭，等本轮结束再常亮
       if (this->activity_pin_ != nullptr) {
-        this->activity_last_flash_ = millis();
-        if (!this->activity_on_) {
-          this->activity_pin_->digital_write(true);
-          this->activity_on_ = true;
-        }
+        this->activity_round_valid_ = true;
+        this->activity_healthy_ = true;
+        this->activity_bad_rounds_ = 0;
       }
       this->publish_register_(reg, data);
       this->advance_read_(false);
@@ -151,10 +172,14 @@ void BL0906::drain_rx_() {
 }
 
 void BL0906::setup() {
-  // 活动指示灯：默认熄灭；每收到一个校验通过的有效帧闪一次
+  // 活动指示灯：上电默认熄灭，收到第一个有效帧后才视为串口正常并常亮
   if (this->activity_pin_ != nullptr) {
     this->activity_pin_->setup();
     this->activity_pin_->digital_write(false);
+    this->activity_on_ = false;
+    this->activity_healthy_ = false;
+    this->activity_round_valid_ = false;
+    this->activity_bad_rounds_ = 0;
   }
   // 只把实际配置了传感器的寄存器加入读取列表，未配置的通道不再占用总线
   this->build_reads_();
@@ -237,6 +262,9 @@ void BL0906::update() {
   this->retries_ = 0;
   this->next_send_at_ = 0;  // 新一轮可以立即发第一条
   this->window_len_ = 0;
+  // 本轮开始：指示灯熄灭，等本轮结束再根据健康状态恢复
+  this->activity_round_valid_ = false;
+  this->set_activity_(false);
   this->read_state_ = ReadState::SEND;
 }
 
@@ -255,7 +283,7 @@ void BL0906::advance_read_(bool error) {
   this->read_index_++;
   if (this->read_index_ >= this->read_count_) {
     this->read_index_ = 0;
-    this->read_state_ = ReadState::IDLE;
+    this->end_round_();
   } else {
     this->read_state_ = ReadState::SEND;
     this->next_send_at_ = millis() + FRAME_GAP_MS;

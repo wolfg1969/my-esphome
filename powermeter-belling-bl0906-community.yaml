@@ -61,7 +61,8 @@ uart:
 sensor:
   - platform: bl0906_community
     uart_id: uart_bus
-    # 每收到一个有效帧闪一次的活动指示灯（按实际 LED 极性调整 inverted）
+    # 串口正常（收到过有效帧）后常亮，整轮轮询期间熄灭；连续两轮无有效帧则熄灭
+    # （按实际 LED 极性调整 inverted）
     activity_pin:
       number: GPIO18
       inverted: true
@@ -81,10 +82,10 @@ sensor:
       name: 'Current_3'
     Current_4:
       name: 'Current_4'
-    Current_5:
-      name: 'Current_5'
-    Current_6:
-      name: 'Current_6'
+    # Current_5:
+    #   name: 'Current_5'
+    # Current_6:
+    #   name: 'Current_6'
     Power_1:
       name: 'Power_1'
       accuracy_decimals: 0
@@ -97,12 +98,12 @@ sensor:
     Power_4:
       name: 'Power_4'
       accuracy_decimals: 0
-    Power_5:
-      name: 'Power_5'
-      accuracy_decimals: 0
-    Power_6:
-      name: 'Power_6'
-      accuracy_decimals: 0
+    # Power_5:
+    #   name: 'Power_5'
+    #   accuracy_decimals: 0
+    # Power_6:
+    #   name: 'Power_6'
+    #   accuracy_decimals: 0
     Energy_1:
       name: 'Energy_1'
       accuracy_decimals: 3
@@ -116,12 +117,12 @@ sensor:
     Energy_4:
       name: 'Energy_4'
       state_class: total_increasing
-    Energy_5:
-      name: 'Energy_5'
-      state_class: total_increasing
-    Energy_6:
-      name: 'Energy_6'
-      state_class: total_increasing
+    # Energy_5:
+    #   name: 'Energy_5'
+    #   state_class: total_increasing
+    # Energy_6:
+    #   name: 'Energy_6'
+    #   state_class: total_increasing
     Power_sum:
       name: 'Total_Power'
     Energy_sum:
