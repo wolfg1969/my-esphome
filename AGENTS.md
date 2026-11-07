@@ -168,6 +168,60 @@ BL0906/UART 问题先读 skill：`.claude/skills/bl0906-uart-debug/SKILL.md`。
   `ESP_LOGI`/`ESP_LOGD`。
 - 启用后校正值由 `setup()` 每次上电写入；改了 `BL0906_IREF` 或 CT/burden 后要重新标定。
 
+## 电量实体迁移到新设备（HA 统计校准）
+
+换 ESP32（MAC 变）、换 BL0906 或旧设备退役后，新实体在 HA 里是全新的：
+`state_class: total_increasing` 会把新实体第一次出现的读数当作零点，长期统计的
+`sum` 从 0 开始，旧表的累计量不会自动带过来。只要仪表盘总量连续，用 HA 的
+统计校准（Adjust sum），不要给原始计数器加固定 offset。
+
+### 前提与事实
+
+- 电量读数是 BL0906 芯片内的 `CF_N_CNT` / `CF_SUM_CNT`，不是旧固件保存的值。
+  同一块 BL0906 不断电，换 ESP32/重烧固件读到的还是同一个累计值；芯片断电则清零。
+- `CF_CNT` 是 24 位无符号：单路满量程约 3739.85 kWh，`Energy_sum` 约 59837.65 kWh。
+  单路一天 10 kWh 时约一年回绕一次。回绕和掉电清零在数值上不可区分。
+- 新旧驱动的换算系数一致（内置 `BL0906_CF` 与社区 `BL0906_CF_SUM_REF` 同式），
+  同芯片切换固件不会出现量级跳变。
+- 社区组件 `custom/bl0906_community/sensor.py` 的 `Energy_*` 默认
+  `state_class: total`；YAML 里的每个 `Energy_*`/`Energy_sum` 必须显式写
+  `total_increasing`，不要删。`total` 会把下降记成负增量，污染累计。
+- HA 的 `total_increasing`：新实体第一次记录时以当时读数为零点，`sum` 从 0 开始；
+  下降超过 10% 视为换表/清零（零点按 0 计，`sum` 继续累加），下降 ≤10% 按负增量
+  处理（`sum` 会往回掉）。因此原始计数器的掉电/回绕可以由 HA 兜住，但**不要**用
+  常量 offset 的模板传感器直接做 Energy 源——复位时会制造假增量或负增量。
+- 同一块 ESP32 + 逐字相同的实体名时，HA 的 entity unique_id 不变（ESPHome 用
+  MAC + 域 + object_id），会直接复用旧实体，这种情况不需要下面的校准。
+
+### 操作
+
+1. 旧设备先停更，并从 Energy Dashboard 移除它的源，避免切换期双计。
+2. 记录旧实体**最新长期统计行的 `sum`**（不是 `state`；掉电/回绕过的话 state 会比
+   sum 小），并记下切换时间 T。
+3. 新实体上线后等第一条长期统计（最多约一个整点）。
+4. HA → 设置 → 开发者工具 → 统计，找到新实体，点右侧 **Adjust sum**。
+5. 时间选 T（或新实体第一条统计的时间），把该点的累计 `sum` 调到旧表的 `sum`：
+   对话框填增量时填 `+旧sum`，填目标值时直接填旧 `sum`。
+6. Energy Dashboard 只保留新实体作为该回路的源。
+
+脚本化可用 `recorder.adjust_statistics` 服务（字段按 HA 版本：
+`statistic_id`/`entity_id` + `start_time` + `adjustment`）。
+
+### 验证
+
+- 新实体最新 `sum − 旧sum` ≈ 切换后的实际用电量。
+- 人为重启/断电 BL0906 一次，`sum` 不应下降；`state` 归零或回绕是正常的。
+- 分路 `Energy_1..4` 如果要继承，各自单独 adjust；不要假设分路之和等于总表
+  （`CF_SUM_CNT` 是芯片内部汇总，不是 ESPHome 侧把四路相加）。
+
+### 注意
+
+- 操作前备份 `home-assistant_v2.db`；不要用 SQL 改单行，官方 adjust 会同步后续行。
+- 只调一次；新旧设备有重叠记录时选对 T，否则重叠期双计。
+- adjust 按数据库存储单位计算，能量是 kWh，不做换算。
+- 旧实体 unique_id 若是旧版 ESPHome 的“设备名开头”格式，新固件会生成新实体；
+  这正是本方案的适用场景，不要试图靠同名让 HA 复用。
+
 ## 其他 ESPHome 配置分析
 
 范围仅限：`powermeter-pzem004t.yaml`、`powermeter.yaml`、
