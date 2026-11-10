@@ -1,7 +1,6 @@
-# not used
 substitutions:
   devicename: powermeter-pzem004t
-  location_id: livingroom
+  location_id: livingroom  # not used
 
 esphome:
   name: $devicename
