@@ -108,15 +108,25 @@ sensor:
       name: 'Energy_1'
       accuracy_decimals: 3
       state_class: total_increasing
+      # 丢弃瞬时的 0 读数，避免 total_increasing 误判为换表后把后续真实读数
+      # 全部计成新增量
+      filters:
+        - filter_out: 0.0
     Energy_2:
       name: 'Energy_2'
       state_class: total_increasing
+      filters:
+        - filter_out: 0.0
     Energy_3:
       name: 'Energy_3'
       state_class: total_increasing
+      filters:
+        - filter_out: 0.0
     Energy_4:
       name: 'Energy_4'
       state_class: total_increasing
+      filters:
+        - filter_out: 0.0
     # Energy_5:
     #   name: 'Energy_5'
     #   state_class: total_increasing
@@ -125,6 +135,9 @@ sensor:
     #   state_class: total_increasing
     Power_sum:
       name: 'Total_Power'
+      state_class: 'measurement'
     Energy_sum:
       name: 'Total_Energy'
       state_class: total_increasing
+      filters:
+        - filter_out: 0.0

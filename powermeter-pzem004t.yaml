@@ -105,6 +105,9 @@ sensor:
     unit_of_measurement: "Wh"
     filters:
       - multiply: 1.0
+      # 丢弃瞬时的 0 读数，避免 total_increasing 误判为换表后把后续真实读数
+      # 全部计成新增量
+      - filter_out: 0.0
   - platform: modbus_controller
     modbus_controller_id: pzem004t
     name: "Frequency"
