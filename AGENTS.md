@@ -224,7 +224,7 @@ BL0906/UART 问题先读 skill：`.claude/skills/bl0906-uart-debug/SKILL.md`。
 
 ## 其他 ESPHome 配置分析
 
-范围仅限：`powermeter-pzem004t.yaml`、`powermeter.yaml`、
+范围仅限：`powermeter-pzem004t.yaml`、`retired/powermeter.yaml`（已退役）、
 `scale_livingroom_ble.yaml`、`weatherstation*.yaml`。
 
 ### 共同点
@@ -251,8 +251,11 @@ BL0906/UART 问题先读 skill：`.claude/skills/bl0906-uart-debug/SKILL.md`。
 - 复位电量是 PZEM 私有帧 `01 42 a8 00`，`write_lambda` 返回 `false`
   以阻止默认 Modbus 帧。
 
-### powermeter.yaml
+### retired/powermeter.yaml（已退役）
 
+- 已移至 `retired/`，不再烧录，仅作参考。文件里的 `!include common/base.yaml`、
+  `!include common/mqtt.yaml` 是相对路径，移动后无法解析；重新启用前需先移回
+  根目录（或改写成 `../common/...`）。
 - ESP8266 `nodemcuv2` + LT518 电表（Modbus RTU）；UART 使用
   GPIO15(TX)/GPIO13(RX)，4800，`logger.baud_rate: 0`。
 - Modbus 地址 0x1，30s 更新。
@@ -313,7 +316,7 @@ BL0906/UART 问题先读 skill：`.claude/skills/bl0906-uart-debug/SKILL.md`。
 | 文件 | `esphome config` | 说明 |
 |---|---|---|
 | powermeter-pzem004t.yaml | 通过 | 标注 not used |
-| powermeter.yaml | 通过 | LT518 + MQTT/Domoticz |
+| retired/powermeter.yaml | 通过 | LT518 + MQTT/Domoticz；已退役，结果为移动前校验 |
 | scale_livingroom_ble.yaml | 失败 | 缺根目录 `secrets.yaml` / `scale_bt_mac` |
 | weatherstation_gongzuojian.yaml | 通过 | 软链接组合完整（bmp280 + dht11 + hum_stat） |
 | weatherstation_livingroom.yaml | 通过 | 软链接组合完整（bme280 + hum_stat） |
