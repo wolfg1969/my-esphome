@@ -61,6 +61,7 @@ uart:
 sensor:
   - platform: bl0906_community
     uart_id: uart_bus
+    update_interval: 30s
     # 串口正常（收到过有效帧）后常亮，整轮轮询期间熄灭；连续两轮无有效帧则熄灭
     # （按实际 LED 极性调整 inverted）
     activity_pin:
